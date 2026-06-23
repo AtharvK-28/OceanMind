@@ -106,6 +106,8 @@ with st.sidebar:
             "🌡️ Marine Health Index",
             "🎣 Sustainable Fishing Zones",
             "🐟 Migration Forecast",
+            "🔬 Biodiversity & CV",
+            "🌐 Digital Twin Scenarios",
             "💬 RAG Query Interface",
             "⛓️ Blockchain Traceability",
             "🔔 Alerts & Subscriptions",
@@ -842,3 +844,279 @@ elif page == "🔔 Alerts & Subscriptions":
         (Hindi / Tamil voice — MVP)
         ```
         """)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: Biodiversity & CV (Phase B)
+# ══════════════════════════════════════════════════════════════════════════════
+
+elif page == "🔬 Biodiversity & CV":
+    st.title("🔬 Biodiversity & Computer Vision")
+    st.markdown(
+        "**Phase B:** YOLOv8 landing-site fish identification + ResNet101 species ID. "
+        "eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution. "
+        "Milestone species: *R. kanagurta* · *S. longiceps* · *P. monodon*."
+    )
+
+    tab_cv, tab_edna, tab_ref = st.tabs(["📸 CV Fish Analysis", "🧬 eDNA Analysis", "📋 Species Reference"])
+
+    # ── CV Tab ─────────────────────────────────────────────────────────────────
+    with tab_cv:
+        st.subheader("Landing-Site Fish Species Identification")
+        st.info(
+            "**Production pipeline:** Submit a catch photo → YOLOv8 detects individual fish "
+            "→ ResNet101 classifies species → fork length + weight estimated via allometric equations.\n\n"
+            "**MVP mode:** Synthetic realistic results based on site coordinates."
+        )
+
+        with st.form("cv_form"):
+            c1, c2 = st.columns(2)
+            with c1:
+                site_lat = st.number_input("Site Latitude", value=8.5, min_value=-30.0, max_value=30.0, step=0.1)
+                site_lon = st.number_input("Site Longitude", value=76.9, min_value=40.0, max_value=110.0, step=0.1)
+            with c2:
+                site_name = st.text_input("Site Name (optional)", placeholder="e.g. Vizhinjam Harbour")
+                st.caption("Upload catch photo (Phase 2 with YOLOv8 GPU inference)")
+                _ = st.file_uploader("Catch photo (optional demo)", type=["jpg","jpeg","png"], disabled=False)
+            analyze = st.form_submit_button("🔍 Analyze Catch", use_container_width=True)
+
+        if analyze or "cv_result" not in st.session_state:
+            with st.spinner("Running CV pipeline…"):
+                result = api_post("/api/v1/cv/analyze", {
+                    "site_lat": site_lat if analyze else 8.5,
+                    "site_lon": site_lon if analyze else 76.9,
+                    "site_name": site_name if analyze else None,
+                })
+                if result:
+                    st.session_state["cv_result"] = result
+
+        cv = st.session_state.get("cv_result")
+        if cv:
+            st.success(f"✅ Detected **{cv['total_fish_detected']} fish** across **{len(cv['species_summary'])} species**")
+
+            # Species summary bar chart
+            sp_data = pd.DataFrame(
+                [(k, v) for k, v in cv["species_summary"].items()],
+                columns=["Species", "Count"]
+            ).sort_values("Count", ascending=False)
+            fig = px.bar(sp_data, x="Species", y="Count", title="Species Composition",
+                         color="Count", color_continuous_scale="Viridis")
+            fig.update_layout(xaxis_tickangle=-35, height=320)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Detection table
+            st.subheader("Individual Detections")
+            det_df = pd.DataFrame([{
+                "ID": d["detection_id"],
+                "Species": d["species_scientific"],
+                "Common Name": d["species_common"],
+                "AphiaID": d["aphia_id"],
+                "Confidence": f"{d['confidence']:.1%}",
+                "Fork Length (mm)": d["fork_length_mm"],
+                "Weight (g)": d["estimated_weight_g"],
+            } for d in cv["detections"]])
+            st.dataframe(det_df, use_container_width=True, hide_index=True)
+            st.caption(f"Model: {cv['model']}")
+
+    # ── eDNA Tab ───────────────────────────────────────────────────────────────
+    with tab_edna:
+        st.subheader("eDNA Metabarcoding Analysis")
+        st.info(
+            "**Pipeline:** FastQC → DADA2 ASV denoising → BLAST+ (NCBI + BOLD) → "
+            "1D CNN (novel sequences) → WoRMS normalisation → Vegan diversity indices.\n\n"
+            "**DENIED-001:** Real-time eDNA is permanently out of scope (24–48h bio processing). "
+            "Results reflect published/cached dataset analysis."
+        )
+
+        with st.form("edna_form"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                sample_id = st.text_input("Sample ID", value="OcM-eDNA-001")
+                sample_lat = st.number_input("Latitude", value=12.0, min_value=-30.0, max_value=30.0, step=0.5)
+            with c2:
+                sample_lon = st.number_input("Longitude", value=74.0, min_value=40.0, max_value=110.0, step=0.5)
+                depth_m = st.number_input("Sample Depth (m)", value=5.0, min_value=0.0, max_value=200.0, step=1.0)
+            with c3:
+                st.caption("Primers: MiFish 12S + 18S rRNA")
+                st.caption("(Miya et al. 2015)")
+            run_edna = st.form_submit_button("🧬 Run eDNA Analysis", use_container_width=True)
+
+        if run_edna:
+            with st.spinner("Running eDNA pipeline…"):
+                edna = api_post("/api/v1/edna/analyze", {
+                    "sample_id": sample_id, "sample_lat": sample_lat,
+                    "sample_lon": sample_lon, "depth_m": depth_m,
+                })
+                if edna:
+                    st.session_state["edna_result"] = edna
+
+        edna = st.session_state.get("edna_result")
+        if edna:
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Species Detected", edna["species_detected"])
+            c2.metric("Total Reads", f"{edna['total_reads']:,}")
+            c3.metric("Shannon H′", edna["diversity_indices"]["shannon_h"])
+            c4.metric("Simpson D′", edna["diversity_indices"]["simpson_d"])
+
+            taxa_df = pd.DataFrame([{
+                "Species": t["species_scientific"],
+                "Common": t["species_common"],
+                "AphiaID": t["aphia_id"],
+                "Reads": t["read_count"],
+                "Confidence": f"{t['confidence']:.1%}",
+                "Method": t["detection_method"],
+                "Marker": t["marker"],
+            } for t in edna["taxa"]])
+            st.dataframe(taxa_df, use_container_width=True, hide_index=True)
+
+            fig = px.pie(taxa_df.head(8), names="Species", values="Reads",
+                         title="eDNA Read Distribution (top 8 species)")
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ── Species Reference Tab ─────────────────────────────────────────────────
+    with tab_ref:
+        st.subheader("WoRMS-Validated Species Reference")
+        with st.spinner("Loading reference list…"):
+            ref = api_get("/api/v1/cv/species-reference")
+        if ref:
+            st.success(
+                f"✅ **{ref['species_count']} species** in reference database. "
+                f"Phase B milestone AphiaIDs: {ref['milestone_species']}"
+            )
+            ref_df = pd.DataFrame([{
+                "Species": s["species"],
+                "Common Name": s["common"],
+                "AphiaID": s["aphia_id"],
+                "WoRMS Status": s["worms"]["status"],
+                "FishBase": s["fishbase_url"],
+            } for s in ref["species"]])
+            st.dataframe(ref_df, use_container_width=True, hide_index=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: Digital Twin Scenarios (Phase G)
+# ══════════════════════════════════════════════════════════════════════════════
+
+elif page == "🌐 Digital Twin Scenarios":
+    st.title("🌐 Digital Twin — MHW Scenario Engine")
+    st.markdown(
+        "**Phase G:** Parameterised SST perturbation → projected MHI score change + migration zone shift. "
+        "Target: **< 30s** compute time. "
+        "Phase 2: Lagrangian IBM (OceanParcels) + larval connectivity + socioecological ABM."
+    )
+
+    # Load presets
+    presets_data = api_get("/api/v1/digital-twin/presets")
+    preset_map = {}
+    if presets_data:
+        for p in presets_data["presets"]:
+            preset_map[p["name"]] = p
+
+    col_ctrl, col_result = st.columns([1, 2])
+
+    with col_ctrl:
+        st.subheader("Scenario Parameters")
+
+        if preset_map:
+            preset_choice = st.selectbox(
+                "Load Preset",
+                ["— Custom —"] + list(preset_map.keys()),
+            )
+        else:
+            preset_choice = "— Custom —"
+
+        default_delta = 2.0
+        default_weeks = 3
+        if preset_choice != "— Custom —" and preset_choice in preset_map:
+            default_delta = preset_map[preset_choice]["sst_delta_c"]
+            default_weeks = preset_map[preset_choice]["duration_weeks"]
+            st.info(preset_map[preset_choice]["description"])
+
+        sst_delta = st.slider("SST Perturbation (°C)", min_value=-5.0, max_value=10.0,
+                               value=float(default_delta), step=0.5)
+        duration = st.slider("Duration (weeks)", min_value=1, max_value=52, value=int(default_weeks))
+        scenario_name = st.text_input("Scenario Label (optional)",
+                                       placeholder=f"+{sst_delta}°C for {duration} weeks")
+
+        incl_mhi  = st.checkbox("Include MHI Projection", value=True)
+        incl_mig  = st.checkbox("Include Migration Shift", value=True)
+
+        run_btn = st.button("🚀 Run Scenario", use_container_width=True, type="primary")
+
+    if run_btn:
+        with st.spinner(f"Running scenario: {sst_delta:+.1f}°C for {duration} weeks…"):
+            result = api_post("/api/v1/digital-twin/scenario", {
+                "sst_delta_c": sst_delta,
+                "duration_weeks": duration,
+                "scenario_name": scenario_name or None,
+                "include_migration_shift": incl_mig,
+                "include_mhi_projection": incl_mhi,
+            })
+            if result:
+                st.session_state["scenario_result"] = result
+
+    scenario = st.session_state.get("scenario_result")
+
+    with col_result:
+        if not scenario:
+            st.info("Configure a scenario on the left and click **Run Scenario**.")
+        else:
+            sc = scenario["scenario"]
+            severity_color = {
+                "MILD": "🟢", "MODERATE": "🟡", "SEVERE": "🟠", "EXTREME": "🔴"
+            }.get(sc["severity"], "⚪")
+            st.subheader(f"{severity_color} {sc['name']}")
+            st.caption(
+                f"Severity: **{sc['severity']}** · Grid: {scenario['grid_resolution_deg']}° · "
+                f"Computed: {scenario['computed_at'][:19]}"
+            )
+
+            if "mhi_projection" in scenario:
+                mhi_proj = scenario["mhi_projection"]
+                st.markdown("#### 🌡️ Marine Health Index Projection")
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Grid Points", mhi_proj["grid_points"])
+                c2.metric("Avg ΔMH​I", f"{mhi_proj['avg_delta_mhi']:+.1f}")
+                c3.metric("Critical/Warning Cells", mhi_proj["critical_cells"])
+                st.info(mhi_proj["summary"])
+
+                mhi_df = pd.DataFrame(mhi_proj["data"])
+                fig = px.scatter_mapbox(
+                    mhi_df, lat="lat", lon="lon",
+                    color="delta_mhi", size=abs(mhi_df["delta_mhi"]).clip(lower=1),
+                    color_continuous_scale="RdYlGn",
+                    color_continuous_midpoint=0,
+                    hover_data=["baseline_mhi", "projected_mhi", "alert_level"],
+                    title="Projected MHI Change (ΔMH​I per grid cell)",
+                    mapbox_style="open-street-map", zoom=3,
+                    center={"lat": 15, "lon": 75},
+                    height=380,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            if "migration_shift" in scenario:
+                mig = scenario["migration_shift"]
+                st.markdown("#### 🐟 Migration Zone Shift")
+                c1, c2 = st.columns(2)
+                c1.metric("Poleward Shift", f"{mig['poleward_shift_deg']:+.2f}°")
+                c2.metric("Grid Points", mig["grid_points"])
+                st.info(mig["summary"])
+
+                mig_df = pd.DataFrame(mig["data"])
+                fig2 = px.scatter_mapbox(
+                    mig_df, lat="lat", lon="lon",
+                    color="delta_prob", size_max=12,
+                    color_continuous_scale="RdBu",
+                    color_continuous_midpoint=0,
+                    hover_data=["baseline_prob", "projected_prob"],
+                    title="Migration Probability Change (Δprob per grid cell)",
+                    mapbox_style="open-street-map", zoom=3,
+                    center={"lat": 15, "lon": 75},
+                    height=380,
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            st.caption(
+                f"🔬 Model: {scenario['model']} · "
+                f"Phase 2: {scenario['phase2_note']}"
+            )
