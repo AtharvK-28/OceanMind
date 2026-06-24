@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ML artifacts (regenerated on train)
+backend/models/artifacts/*.pkl
+backend/rag/faiss_index/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (frontend build artifacts if any)
+node_modules/
+package-lock.json
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Docker
+postgres_data/
