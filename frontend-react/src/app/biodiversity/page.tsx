@@ -17,8 +17,22 @@ export default function BiodiversityPage() {
 
   // CV state
   const [cvForm, setCvForm] = useState({ site_lat: 8.5, site_lon: 76.9, site_name: "" });
+  const [cvImage, setCvImage] = useState<string | null>(null);
+  const [cvPreview, setCvPreview] = useState<string | null>(null);
   const [cvResult, setCvResult] = useState<CVAnalyzeResponse | null>(null);
   const [cvLoading, setCvLoading] = useState(false);
+
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCvPreview(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = (reader.result as string).split(",")[1];
+      setCvImage(b64);
+    };
+    reader.readAsDataURL(file);
+  }
 
   // eDNA state
   const [ednaForm, setEdnaForm] = useState({ sample_id: "OcM-eDNA-001", sample_lat: 12, sample_lon: 74, depth_m: 5 });
@@ -30,8 +44,10 @@ export default function BiodiversityPage() {
 
   async function runCV(e: React.FormEvent) {
     e.preventDefault(); setCvLoading(true);
-    try { setCvResult(await apiPost<CVAnalyzeResponse>("/api/v1/cv/analyze", cvForm)); }
-    finally { setCvLoading(false); }
+    try {
+      const payload = { ...cvForm, image_base64: cvImage || undefined };
+      setCvResult(await apiPost<CVAnalyzeResponse>("/api/v1/cv/analyze", payload));
+    } finally { setCvLoading(false); }
   }
 
   async function runEdna(e: React.FormEvent) {
@@ -59,27 +75,55 @@ export default function BiodiversityPage() {
 
       {tab === "cv" && (
         <div className="space-y-6">
-          <form onSubmit={runCV} className="grid grid-cols-3 gap-4 max-w-xl">
-            <label className="block">
-              <span className="text-xs text-white/50">Latitude</span>
-              <input type="number" step="0.1" value={cvForm.site_lat} onChange={(e) => setCvForm({ ...cvForm, site_lat: +e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
-            </label>
-            <label className="block">
-              <span className="text-xs text-white/50">Longitude</span>
-              <input type="number" step="0.1" value={cvForm.site_lon} onChange={(e) => setCvForm({ ...cvForm, site_lon: +e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
-            </label>
-            <label className="block">
-              <span className="text-xs text-white/50">Site Name</span>
-              <input type="text" value={cvForm.site_name} onChange={(e) => setCvForm({ ...cvForm, site_name: e.target.value })}
-                placeholder="e.g. Vizhinjam"
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25" />
-            </label>
+          <form onSubmit={runCV} className="max-w-2xl space-y-4">
+            {/* Image upload — primary input */}
+            <div className="border-2 border-dashed border-white/15 rounded-xl p-6 text-center
+                            hover:border-[#e64a19]/40 transition-colors relative">
+              {cvPreview ? (
+                <div className="relative inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cvPreview} alt="Catch photo" className="max-h-48 rounded-lg mx-auto" />
+                  <button type="button" onClick={() => { setCvImage(null); setCvPreview(null); }}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                    &times;
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-3xl mb-2">📸</div>
+                  <p className="text-sm text-white/50 mb-1">Drop a catch photo or tap to take one</p>
+                  <p className="text-xs text-white/30">JPG, PNG — the model will detect fish species</p>
+                </div>
+              )}
+              <input type="file" accept="image/*" capture="environment" onChange={handleImageUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            </div>
+
+            {/* Location fields */}
+            <div className="grid grid-cols-3 gap-4">
+              <label className="block">
+                <span className="text-xs text-white/50">Latitude</span>
+                <input type="number" step="0.1" value={cvForm.site_lat} onChange={(e) => setCvForm({ ...cvForm, site_lat: +e.target.value })}
+                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+              </label>
+              <label className="block">
+                <span className="text-xs text-white/50">Longitude</span>
+                <input type="number" step="0.1" value={cvForm.site_lon} onChange={(e) => setCvForm({ ...cvForm, site_lon: +e.target.value })}
+                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+              </label>
+              <label className="block">
+                <span className="text-xs text-white/50">Site Name</span>
+                <input type="text" value={cvForm.site_name} onChange={(e) => setCvForm({ ...cvForm, site_name: e.target.value })}
+                  placeholder="e.g. Vizhinjam"
+                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25" />
+              </label>
+            </div>
+
             <button type="submit" disabled={cvLoading}
-              className="col-span-3 bg-[#e64a19] hover:bg-[#d84315] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
-              {cvLoading ? "Analyzing..." : "🔍 Analyze Catch"}
+              className="w-full bg-[#e64a19] hover:bg-[#d84315] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
+              {cvLoading ? "Running detection..." : cvImage ? "Detect fish species" : "Run with synthetic data"}
             </button>
+            {cvImage && <p className="text-xs text-green-400/60 text-center">Real Roboflow detection will run on your photo</p>}
           </form>
           {cvLoading && <LoadingSpinner text="Running CV pipeline..." />}
           {cvResult && !cvLoading && (

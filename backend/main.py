@@ -19,7 +19,69 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import glob as globmod
 from backend.db.connection import check_db_connection, get_db, engine
+
+ARGO_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "dataARGO")
+
+
+def _load_real_argo() -> pd.DataFrame:
+    """Load real ARGO float CSVs and extract surface observations with climatology fill."""
+    csv_files = globmod.glob(os.path.join(ARGO_DATA_DIR, "PR_PF_*.csv"))
+    if not csv_files:
+        return pd.DataFrame()
+
+    frames = []
+    for f in csv_files:
+        try:
+            raw = pd.read_csv(f)
+            col_map = {}
+            for c in raw.columns:
+                cl = c.strip().lower()
+                if "latitude" in cl: col_map[c] = "latitude"
+                elif "longitude" in cl: col_map[c] = "longitude"
+                elif "temp" in cl and "qc" not in cl and "adjusted" not in cl: col_map[c] = "sst_c"
+                elif "pres" in cl and "qc" not in cl and "adjusted" not in cl: col_map[c] = "depth_dbar"
+                elif "platform" in cl: col_map[c] = "float_id"
+                elif "date" in cl and "qc" not in cl: col_map[c] = "datetime"
+            raw = raw.rename(columns=col_map)
+
+            if "sst_c" not in raw.columns or "latitude" not in raw.columns:
+                continue
+
+            raw["sst_c"] = pd.to_numeric(raw["sst_c"], errors="coerce")
+            raw["depth_dbar"] = pd.to_numeric(raw.get("depth_dbar", pd.Series(dtype=float)), errors="coerce")
+
+            # Surface observation: shallowest measurement (< 10 dbar)
+            surface = raw[raw["depth_dbar"] <= 10].copy() if "depth_dbar" in raw.columns else raw.head(1).copy()
+            if surface.empty:
+                surface = raw.head(1).copy()
+            obs = surface.iloc[0]
+            frames.append({
+                "latitude": float(obs["latitude"]),
+                "longitude": float(obs["longitude"]),
+                "sst_c": float(obs["sst_c"]),
+                "float_id": str(obs.get("float_id", "")),
+                "source": "ARGO_GDAC_REAL",
+            })
+        except Exception:
+            continue
+
+    if not frames:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(frames)
+    month = datetime.now().month
+    for _, row in df.iterrows():
+        p = _regional_params(row["latitude"], row["longitude"], month)
+        idx = row.name
+        df.loc[idx, "chlorophyll_mgl"] = p["chlorophyll_mgl"]
+        df.loc[idx, "dissolved_o2"] = p["dissolved_o2"]
+        df.loc[idx, "ph"] = p["ph"]
+        df.loc[idx, "salinity_psu"] = p["salinity_psu"]
+
+    logger.info(f"Loaded {len(df)} real ARGO float surface observations.")
+    return df
 from backend.models.blockchain import ledger
 
 def _is_indian_eez(lat: float, lon: float) -> bool:
@@ -33,16 +95,16 @@ def _is_indian_eez(lat: float, lon: float) -> bool:
     if 20.5 <= lat <= 24 and 69 <= lon <= 72.5:
         return False
     # Gujarat mainland east of Gulf of Cambay
-    if 20 <= lat <= 24 and lon >= 72:
+    if 20 <= lat <= 24 and 72 <= lon <= 80:
         return False
     # Kutch / Rann region
     if 22.5 <= lat <= 24.5 and 68 <= lon <= 72:
         return False
-    # Maharashtra / Goa inland (east of Western Ghats)
-    if 15 <= lat <= 20 and lon >= 74:
+    # Maharashtra / Goa inland (between Western Ghats and east coast)
+    if 15 <= lat <= 20 and 74 <= lon <= 80:
         return False
     # Karnataka / Kerala inland
-    if 10 <= lat <= 15 and lon >= 76:
+    if 10 <= lat <= 15 and 76 <= lon <= 79:
         return False
 
     # Zone A / A1-A3: NW Arabian Sea (Gujarat-Maharashtra shelf)
@@ -385,25 +447,39 @@ async def mhi_status(
     Marine Health Index scores for the Indian EEZ grid.
     Returns per-cell MHI score (0–100), stress level, and alert flag.
     """
-    # Generate grid scores (production: pull from DB; MVP: compute on synthetic)
+    # Try real ARGO data first, then DB, then synthetic
     df = pd.DataFrame()
-    try:
-        with engine.connect() as conn:
-            query = f"""
-                SELECT a.latitude, a.longitude, a.temperature_c AS sst_c,
-                       s.chlorophyll_mgl, a.dissolved_o2, a.ph, a.salinity_psu
-                FROM argo_profiles a
-                LEFT JOIN data_bubbles b ON a.bubble_id = b.bubble_id
-                LEFT JOIN incois_sst s ON s.bubble_id = b.bubble_id
-                WHERE a.latitude BETWEEN {lat_min} AND {lat_max}
-                  AND a.longitude BETWEEN {lon_min} AND {lon_max}
-                LIMIT 1000;
-            """
-            df = pd.read_sql(query, conn)
-            if df.empty:
-                logger.warning("No data in DB for MHI, falling back to synthetic.")
-    except Exception as e:
-        logger.warning(f"Failed to fetch MHI data from DB: {e}. Using synthetic.")
+
+    # 1. Real ARGO float CSVs
+    argo_real = _load_real_argo()
+    if not argo_real.empty:
+        in_bbox = argo_real[
+            (argo_real["latitude"] >= lat_min) & (argo_real["latitude"] <= lat_max) &
+            (argo_real["longitude"] >= lon_min) & (argo_real["longitude"] <= lon_max)
+        ]
+        if not in_bbox.empty:
+            df = in_bbox.copy()
+            logger.info(f"Using {len(df)} real ARGO observations for MHI.")
+
+    # 2. DB fallback
+    if df.empty:
+        try:
+            with engine.connect() as conn:
+                query = f"""
+                    SELECT a.latitude, a.longitude, a.temperature_c AS sst_c,
+                           s.chlorophyll_mgl, a.dissolved_o2, a.ph, a.salinity_psu
+                    FROM argo_profiles a
+                    LEFT JOIN data_bubbles b ON a.bubble_id = b.bubble_id
+                    LEFT JOIN incois_sst s ON s.bubble_id = b.bubble_id
+                    WHERE a.latitude BETWEEN {lat_min} AND {lat_max}
+                      AND a.longitude BETWEEN {lon_min} AND {lon_max}
+                    LIMIT 1000;
+                """
+                df = pd.read_sql(query, conn)
+                if df.empty:
+                    logger.warning("No data in DB for MHI, falling back to synthetic.")
+        except Exception as e:
+            logger.warning(f"Failed to fetch MHI data from DB: {e}. Using synthetic.")
 
     if df.empty:
         import numpy as np
@@ -436,11 +512,13 @@ async def mhi_status(
             "stress_level": row["stress_level"],
             "alert": bool(row["alert"]),
         })
+    data_source = "ARGO GDAC (real float data)" if "source" in df.columns and (df["source"] == "ARGO_GDAC_REAL").any() else "Synthetic (climatology-calibrated)"
     return {
         "grid_cells": cells,
         "computed_at": datetime.now(timezone.utc).isoformat(),
         "coverage": "Indian EEZ",
         "model": "Isolation Forest v1.0",
+        "data_source": data_source,
         "total_cells": len(cells),
         "alerts_active": sum(1 for c in cells if c["alert"]),
     }
@@ -1004,6 +1082,33 @@ def _get_region_for_coords(lat: float, lon: float) -> str:
         return "BENGAL"
     return "TAMILNADU"
 
+ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "")
+ROBOFLOW_MODEL_ID = "fish-species-identification-fmqbi/1"
+ROBOFLOW_API_URL = "https://serverless.roboflow.com"
+
+
+def _roboflow_detect(image_base64: str) -> list[dict]:
+    """Call Roboflow serverless API for fish species detection."""
+    if not ROBOFLOW_API_KEY:
+        return []
+    try:
+        resp = requests.post(
+            f"{ROBOFLOW_API_URL}/{ROBOFLOW_MODEL_ID}",
+            params={"api_key": ROBOFLOW_API_KEY},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=image_base64,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        predictions = data.get("predictions", [])
+        logger.info(f"Roboflow returned {len(predictions)} detections.")
+        return predictions
+    except Exception as e:
+        logger.warning(f"Roboflow API error: {e}")
+        return []
+
+
 def _worms_lookup(aphia_id: int) -> dict:
     """Simulate WoRMS AphiaID lookup response."""
     base_url = "https://www.marinespecies.org/rest/AphiaRecordByAphiaID"
@@ -1029,41 +1134,76 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
       4. ResNet101 (fine-tuned Indian Ocean) → species ID + confidence
       5. Fork/total length (mm) + weight (g) via length-weight relationship
 
-    MVP: Returns realistic synthetic detections for the given site coordinates.
+    MVP: Real Roboflow fish detection when image provided; synthetic fallback otherwise.
     Reference: Shedrawi et al. 2024, Scientific Reports 14 (Ikasavea CV pipeline).
     """
     rng = np.random.default_rng(seed=int(abs(req.site_lat * 100 + req.site_lon)))
     region = _get_region_for_coords(req.site_lat, req.site_lon)
-    weights_map = _REGIONAL_SPECIES_WEIGHTS.get(region, _REGIONAL_SPECIES_WEIGHTS["KERALA"])
 
-    species_ids = [sp["aphia_id"] for sp in _INDIAN_OCEAN_SPECIES]
-    weights = np.array([weights_map.get(sid, 0.05) for sid in species_ids])
-    weights = weights / weights.sum()
-
-    n_fish = int(rng.integers(5, 15))
     detections = []
-    for i in range(n_fish):
-        sp_idx = rng.choice(len(_INDIAN_OCEAN_SPECIES), p=weights)
-        sp = _INDIAN_OCEAN_SPECIES[sp_idx]
-        confidence = float(np.clip(rng.normal(0.85, 0.06), 0.60, 0.99))
-        fork_length_mm = float(np.clip(rng.normal(sp["fl_mean"], sp["fl_std"]), 50, 1200))
-        weight_g = float(sp["a"] * (fork_length_mm ** sp["b"]))
-        detections.append({
-            "detection_id": i + 1,
-            "species_scientific": sp["species"],
-            "species_common": sp["common"],
-            "aphia_id": sp["aphia_id"],
-            "worms": _worms_lookup(sp["aphia_id"]),
-            "confidence": round(confidence, 3),
-            "fork_length_mm": round(fork_length_mm, 1),
-            "estimated_weight_g": round(weight_g, 1),
-            "region": region,
-            "bounding_box": {
-                "x1": int(rng.integers(10, 200)),
-                "y1": int(rng.integers(10, 150)),
-                "x2": int(rng.integers(250, 600)),
-                "y2": int(rng.integers(200, 450)),
-            },
+    cv_model = "synthetic (no image provided)"
+
+    # Real detection via Roboflow if image provided
+    if req.image_base64 and ROBOFLOW_API_KEY:
+        rf_preds = _roboflow_detect(req.image_base64)
+        if rf_preds:
+            cv_model = f"Roboflow fish-species-identification ({len(rf_preds)} detections)"
+            for i, pred in enumerate(rf_preds):
+                class_name = pred.get("class", "unknown")
+                conf = pred.get("confidence", 0.5)
+                bbox = {
+                    "x1": int(pred.get("x", 0) - pred.get("width", 100) / 2),
+                    "y1": int(pred.get("y", 0) - pred.get("height", 100) / 2),
+                    "x2": int(pred.get("x", 0) + pred.get("width", 100) / 2),
+                    "y2": int(pred.get("y", 0) + pred.get("height", 100) / 2),
+                }
+                bbox_w = bbox["x2"] - bbox["x1"]
+                est_fork_mm = bbox_w * 1.2
+                est_weight_g = 0.0085 * (est_fork_mm ** 2.97)
+                detections.append({
+                    "detection_id": i + 1,
+                    "species_scientific": class_name,
+                    "species_common": class_name.replace("_", " ").title(),
+                    "aphia_id": None,
+                    "worms": None,
+                    "confidence": round(float(conf), 3),
+                    "fork_length_mm": round(est_fork_mm, 1),
+                    "estimated_weight_g": round(est_weight_g, 1),
+                    "region": region,
+                    "bounding_box": bbox,
+                    "source": "roboflow_real",
+                })
+
+    # Synthetic fallback if no image or Roboflow failed
+    if not detections:
+        weights_map = _REGIONAL_SPECIES_WEIGHTS.get(region, _REGIONAL_SPECIES_WEIGHTS["KERALA"])
+        species_ids = [sp["aphia_id"] for sp in _INDIAN_OCEAN_SPECIES]
+        weights = np.array([weights_map.get(sid, 0.05) for sid in species_ids])
+        weights = weights / weights.sum()
+
+        n_fish = int(rng.integers(5, 15))
+        for i in range(n_fish):
+            sp_idx = rng.choice(len(_INDIAN_OCEAN_SPECIES), p=weights)
+            sp = _INDIAN_OCEAN_SPECIES[sp_idx]
+            confidence = float(np.clip(rng.normal(0.85, 0.06), 0.60, 0.99))
+            fork_length_mm = float(np.clip(rng.normal(sp["fl_mean"], sp["fl_std"]), 50, 1200))
+            weight_g = float(sp["a"] * (fork_length_mm ** sp["b"]))
+            detections.append({
+                "detection_id": i + 1,
+                "species_scientific": sp["species"],
+                "species_common": sp["common"],
+                "aphia_id": sp["aphia_id"],
+                "worms": _worms_lookup(sp["aphia_id"]),
+                "confidence": round(confidence, 3),
+                "fork_length_mm": round(fork_length_mm, 1),
+                "estimated_weight_g": round(weight_g, 1),
+                "region": region,
+                "bounding_box": {
+                    "x1": int(rng.integers(10, 200)),
+                    "y1": int(rng.integers(10, 150)),
+                    "x2": int(rng.integers(250, 600)),
+                    "y2": int(rng.integers(200, 450)),
+                },
         })
 
     species_summary = {}
@@ -1077,10 +1217,10 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
             "lon": req.site_lon,
             "name": req.site_name or "Landing site",
         },
-        "total_fish_detected": n_fish,
+        "total_fish_detected": len(detections),
         "species_summary": species_summary,
         "detections": detections,
-        "model": "YOLOv8 + ResNet101 (synthetic demo data — production requires GPU inference)",
+        "model": cv_model,
         "pipeline_stages": [
             "geometric_correction",
             "pixel_calibration",

@@ -12,7 +12,14 @@ from typing import Optional
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_groq import ChatGroq
+try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    ChatOpenAI = None
+try:
+    from langchain_groq import ChatGroq
+except ImportError:
+    ChatGroq = None
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from loguru import logger
@@ -148,10 +155,11 @@ class OceanMindRAG:
         self._docs: list[Document] = []
 
     def initialise(self):
-        """Build FAISS index + initialise Groq LLM."""
+        """Build FAISS index + initialise LLM (xAI Grok or Groq)."""
+        xai_key = os.getenv("XAI_API_KEY", "")
         groq_key = os.getenv("GROQ_API_KEY", "")
-        if not groq_key:
-            logger.warning("GROQ_API_KEY not set — RAG will use fallback mode.")
+        if not xai_key and not groq_key:
+            logger.warning("No LLM API key set — RAG will use fallback mode.")
 
         logger.info("Initialising RAG pipeline (sentence-transformers CPU mode)...")
 
@@ -192,16 +200,29 @@ class OceanMindRAG:
             os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
             self.vectorstore.save_local(FAISS_INDEX_PATH)
 
-        # Groq LLM
-        if groq_key:
+        # LLM: prefer xAI Grok, fall back to Groq, then fallback mode
+        if xai_key and ChatOpenAI:
+            self.llm = ChatOpenAI(
+                model="grok-3-mini",
+                api_key=xai_key,
+                base_url="https://api.x.ai/v1",
+                temperature=0.1,
+                max_tokens=512,
+            )
+            self._llm_name = "grok-3-mini (xAI)"
+            logger.info("LLM: xAI Grok connected.")
+        elif groq_key and ChatGroq:
             self.llm = ChatGroq(
-                model="llama3-8b-8192",
+                model="llama-3.3-70b-versatile",
                 api_key=groq_key,
                 temperature=0.1,
                 max_tokens=512,
             )
+            self._llm_name = "llama-3.3-70b-versatile (Groq)"
+            logger.info("LLM: Groq connected.")
         else:
-            self.llm = None  # fallback mode
+            self.llm = None
+            self._llm_name = "fallback"
 
         self._ready = True
         logger.success("RAG pipeline ready.")
@@ -250,7 +271,7 @@ class OceanMindRAG:
         else:
             # Fallback: return context-based answer without LLM
             answer = (
-                f"[RAG Fallback Mode — Groq API key not configured]\n\n"
+                f"[RAG Fallback Mode — no LLM API key configured]\n\n"
                 f"Based on retrieved ocean data:\n{context[:600]}..."
             )
 
@@ -259,7 +280,7 @@ class OceanMindRAG:
             "question":   question,
             "answer_id":  answer_id,
             "provenance": provenance,
-            "model_used": "llama3-8b-8192" if self.llm else "fallback",
+            "model_used": self._llm_name if hasattr(self, '_llm_name') else "fallback",
             "timestamp":  datetime.now(timezone.utc).isoformat(),
         }
 

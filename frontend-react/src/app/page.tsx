@@ -275,13 +275,19 @@ export default function FisherView() {
       </div>
 
       {/* Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <button onClick={() => setShowCatch(!showCatch)}
           className="flex items-center justify-center gap-2 bg-green-700/80 hover:bg-green-600
                      text-white rounded-xl py-3 text-sm font-semibold border border-green-500/20
                      transition-all hover:-translate-y-0.5">
           Log catch
         </button>
+        <a href="/biodiversity"
+          className="flex items-center justify-center gap-2 bg-[#e64a19]/80 hover:bg-[#d84315]
+                     text-white rounded-xl py-3 text-sm font-semibold border border-orange-500/20
+                     transition-all hover:-translate-y-0.5">
+          Scan catch photo
+        </a>
         <a href="/voice"
           className="flex items-center justify-center gap-2 bg-blue-700/80 hover:bg-blue-600
                      text-white rounded-xl py-3 text-sm font-semibold border border-blue-500/20
