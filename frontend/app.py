@@ -31,6 +31,126 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Theme / Custom CSS ────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Sidebar background ──────────────────────────────────────── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #06101f 0%, #0b1a2e 40%, #0e223d 100%);
+}
+
+/* ── Nav: hide radio circles, restyle as nav links ───────────── */
+section[data-testid="stSidebar"] .stRadio > div {
+    gap: 2px !important;
+}
+section[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] > label {
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 14px !important;
+    margin: 0;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.72);
+}
+section[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] > label:hover {
+    background: rgba(79,195,247,0.10);
+    color: #ffffff;
+}
+section[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] > label[data-checked="true"],
+section[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] > label:has(input:checked) {
+    background: linear-gradient(135deg, rgba(6,66,115,0.6), rgba(26,138,92,0.4));
+    color: #ffffff;
+    font-weight: 600;
+    border-left: 3px solid #4fc3f7;
+}
+/* hide the actual radio circle */
+section[data-testid="stSidebar"] .stRadio > div[role="radiogroup"] > label > div:first-child {
+    display: none !important;
+}
+
+/* ── Metric cards ────────────────────────────────────────────── */
+div[data-testid="stMetric"] {
+    background: linear-gradient(135deg, rgba(14,34,61,0.65), rgba(10,22,40,0.75));
+    border: 1px solid rgba(79,195,247,0.12);
+    border-radius: 12px;
+    padding: 16px 18px 12px;
+    backdrop-filter: blur(6px);
+}
+div[data-testid="stMetric"] label {
+    font-size: 0.72rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+}
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    font-weight: 700;
+}
+
+/* ── Tab styling ─────────────────────────────────────────────── */
+button[data-baseweb="tab"] {
+    font-size: 0.88rem;
+    border-radius: 8px 8px 0 0;
+}
+
+/* ── Hero banner ─────────────────────────────────────────────── */
+.ocean-hero {
+    background: linear-gradient(135deg, #064273 0%, #1a8a5c 50%, #0b3d2e 100%);
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.ocean-hero h1 {
+    margin: 0 0 0.4rem 0;
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+.ocean-hero p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.78);
+    line-height: 1.55;
+}
+.ocean-hero .stat-row {
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 1.3rem;
+    flex-wrap: wrap;
+}
+.ocean-hero .stat-item {
+    text-align: center;
+    min-width: 80px;
+}
+.ocean-hero .stat-item .num {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #4fc3f7;
+    line-height: 1.1;
+}
+.ocean-hero .stat-item .lbl {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.55);
+    margin-top: 2px;
+}
+
+/* ── Plotly charts — transparent bg ──────────────────────────── */
+.js-plotly-plot .plotly .main-svg {
+    background: transparent !important;
+}
+
+/* ── General cleanup ─────────────────────────────────────────── */
+.stDivider {
+    margin: 0.8rem 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def api_get(path: str, params: dict = None) -> dict | None:
@@ -91,13 +211,19 @@ def sfz_folium_color(zone: str) -> str:
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.image(
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Ocean_Planet_Mosaic.jpg/320px-Ocean_Planet_Mosaic.jpg",
-        use_container_width=True,
-    )
-    st.title("🌊 OceanMind")
-    st.caption("AI Marine Intelligence Platform")
-    st.divider()
+    st.markdown("""
+    <div style="text-align:center;padding:1.2rem 0 0.8rem">
+        <div style="font-size:2.5rem;line-height:1">🌊</div>
+        <div style="font-size:1.4rem;font-weight:700;margin-top:0.3rem;
+                    letter-spacing:-0.01em;color:#e0f7fa">OceanMind</div>
+        <div style="font-size:0.72rem;opacity:0.5;margin-top:0.15rem">
+            AI Marine Intelligence &middot; Biothon 2026
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div style="border-top:1px solid rgba(255,255,255,0.06);margin:0.4rem 0 0.6rem"></div>',
+                unsafe_allow_html=True)
 
     page = st.radio(
         "Navigate",
@@ -111,51 +237,99 @@ with st.sidebar:
             "💬 RAG Query Interface",
             "⛓️ Blockchain Traceability",
             "🔔 Alerts & Subscriptions",
+            "🗣️ Bhashini Voice",
         ],
         label_visibility="collapsed",
     )
 
-    st.divider()
+    st.markdown('<div style="border-top:1px solid rgba(255,255,255,0.06);margin:0.6rem 0 0.4rem"></div>',
+                unsafe_allow_html=True)
+
     health = api_get("/health")
     if health:
-        st.markdown("**System Status**")
-        db_col = "🟢" if health.get("db") == "ok" else "🟡"
-        mhi_col = "🟢" if health.get("mhi_model") == "loaded" else "🔴"
-        sfz_col = "🟢" if health.get("sfz_model") == "loaded" else "🔴"
-        rag_col = "🟢" if health.get("rag") == "ready" else "🟡"
-        st.caption(f"{db_col} PostGIS  |  {mhi_col} MHI  |  {sfz_col} SFZ")
-        st.caption(f"{rag_col} RAG  |  ⛓️ {health.get('blockchain', '—')}")
-        st.caption(f"_Updated {datetime.now().strftime('%H:%M:%S')}_")
+        db_ok  = health.get("db") == "ok"
+        mhi_ok = health.get("mhi_model") == "loaded"
+        sfz_ok = health.get("sfz_model") == "loaded"
+        rag_ok = health.get("rag") == "ready"
+        bc_num = health.get("blockchain", "0")
+
+        def dot(ok):
+            c = "#4caf50" if ok else "#ff9800"
+            return f'<span style="color:{c};font-size:0.6rem">●</span>'
+
+        st.markdown(f"""
+        <div style="padding:4px 8px">
+            <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;
+                        color:rgba(255,255,255,0.35);margin-bottom:6px;font-weight:600">System</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:0.75rem;
+                        color:rgba(255,255,255,0.7);line-height:1.7">
+                <span>{dot(db_ok)} PostGIS</span>
+                <span>{dot(mhi_ok)} MHI</span>
+                <span>{dot(sfz_ok)} SFZ</span>
+                <span>{dot(rag_ok)} RAG</span>
+            </div>
+            <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);margin-top:8px">
+                ⛓️ {bc_num} &middot; {datetime.now().strftime('%H:%M')}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: Dashboard
 # ══════════════════════════════════════════════════════════════════════════════
 
 if page == "📊 Dashboard":
-    st.title("OceanMind — Marine Intelligence Dashboard")
-    st.caption("AI-Driven Unified Marine Data Intelligence | Indian EEZ | Biothon 2026")
-
-    col1, col2, col3, col4 = st.columns(4)
 
     # Quick stats from API
     mhi_data = api_get("/api/v1/mhi/status")
     sfz_data = api_get("/api/v1/sfz/current")
     chain    = api_get("/api/v1/trace/chain-summary")
 
+    # Hero banner
+    mhi_total = mhi_data.get("total_cells", 0) if mhi_data else 0
+    mhi_alerts = mhi_data.get("alerts_active", 0) if mhi_data else 0
+    sfz_summary = sfz_data.get("zone_summary", {}) if sfz_data else {}
+    sfz_green = sfz_summary.get("GREEN", 0)
+    sfz_total = sfz_data.get("total_zones", 0) if sfz_data else 0
+
+    st.markdown(f"""
+    <div class="ocean-hero">
+        <h1>🌊 OceanMind Dashboard</h1>
+        <p>AI-Driven Unified Marine Data Intelligence &mdash; Indian Exclusive Economic Zone</p>
+        <div class="stat-row">
+            <div class="stat-item">
+                <div class="num">{mhi_total}</div>
+                <div class="lbl">MHI Grid Cells</div>
+            </div>
+            <div class="stat-item">
+                <div class="num" style="color:#ef5350">{mhi_alerts}</div>
+                <div class="lbl">Stress Alerts</div>
+            </div>
+            <div class="stat-item">
+                <div class="num" style="color:#66bb6a">{sfz_green}</div>
+                <div class="lbl">Green Zones</div>
+            </div>
+            <div class="stat-item">
+                <div class="num">{sfz_total}</div>
+                <div class="lbl">Total SFZ</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3, col4 = st.columns(4)
+
     if mhi_data:
-        alerts = mhi_data.get("alerts_active", 0)
-        total  = mhi_data.get("total_cells", 0)
-        col1.metric("🌡️ MHI Grid Cells", total, help="Active monitoring cells in Indian EEZ")
-        col2.metric("🚨 Active MHI Alerts", alerts, delta=f"{alerts} cells stressed", delta_color="inverse")
+        col1.metric("🌡️ MHI Grid Cells", mhi_total, help="Active monitoring cells in Indian EEZ")
+        col2.metric("🚨 Active MHI Alerts", mhi_alerts, delta=f"{mhi_alerts} cells stressed", delta_color="inverse")
 
     if sfz_data:
-        summary = sfz_data.get("zone_summary", {})
-        green   = summary.get("GREEN", 0)
-        red     = summary.get("RED", 0)
+        green = sfz_summary.get("GREEN", 0)
+        red   = sfz_summary.get("RED", 0)
         col3.metric("🟢 Green Zones", green, help="Recommended fishing zones this week")
         col4.metric("🔴 Red Zones", red, delta=f"avoid {red} zones", delta_color="inverse")
 
-    st.divider()
+    st.markdown("")
 
     # Map overview (SFZ)
     st.subheader("🗺️ Indian EEZ Overview — Sustainable Fishing Zones")
@@ -177,7 +351,7 @@ if page == "📊 Dashboard":
                 popup_html = (
                     f"<b>Zone:</b> {zone}<br>"
                     f"<b>Bycatch Risk:</b> {score:.2f}<br>"
-                    f"<b>Top Drivers:</b> {', '.join(shap) if shap else '—'}"
+                    f"<b>Top Drivers:</b> {', '.join(s['feature'] if isinstance(s, dict) else str(s) for s in shap) if shap else '—'}"
                 )
 
                 folium.CircleMarker(
@@ -241,12 +415,16 @@ if page == "📊 Dashboard":
 
     # Blockchain summary
     if chain:
-        st.divider()
-        st.subheader("⛓️ Catch Ledger")
-        c1, c2, c3 = st.columns(3)
+        st.markdown("")
+        st.subheader("⛓️ Catch Traceability Ledger")
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric("Total Blocks", chain.get("total_blocks", 0))
         c2.metric("Catch Records", chain.get("total_catch_records", 0))
         c3.metric("Species Logged", len(chain.get("species_logged", [])))
+        c4.metric("Ledger Type", chain.get("ledger_type", "—")[:12])
+        species = chain.get("species_logged", [])
+        if species:
+            st.caption(f"Species on ledger: {', '.join(species)}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -254,11 +432,13 @@ if page == "📊 Dashboard":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "🌡️ Marine Health Index":
-    st.title("🌡️ Marine Health Index")
-    st.markdown(
-        "**Isolation Forest** anomaly detection across SST, Chlorophyll-a, "
-        "Dissolved Oxygen, pH, and Salinity. Score 0–100 (lower = more stressed)."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #1a237e 0%, #0d47a1 50%, #01579b 100%)">
+        <h1>🌡️ Marine Health Index</h1>
+        <p><b>Isolation Forest</b> anomaly detection across SST, Chlorophyll-a,
+        Dissolved Oxygen, pH, and Salinity. Score 0&ndash;100 (lower = more stressed).</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -375,11 +555,13 @@ elif page == "🌡️ Marine Health Index":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "🎣 Sustainable Fishing Zones":
-    st.title("🎣 Sustainable Fishing Zones")
-    st.markdown(
-        "**XGBoost** weekly classifier with **SHAP** explainability. "
-        "Green = recommended · Amber = caution · Red = avoid."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #388e3c 100%)">
+        <h1>🎣 Sustainable Fishing Zones</h1>
+        <p><b>XGBoost</b> weekly classifier with <b>SHAP</b> explainability.
+        Green = recommended &middot; Amber = caution &middot; Red = avoid.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.spinner("Loading SFZ data..."):
         data = api_get("/api/v1/sfz/current")
@@ -407,10 +589,14 @@ elif page == "🎣 Sustainable Fishing Zones":
                 risk   = props.get("bycatch_risk_score", 0.5)
                 shap   = props.get("shap_top3", [])
 
+                shap_lines = '<br>'.join(
+                    f"• {s['feature']}" if isinstance(s, dict) else f"• {s}"
+                    for s in shap
+                ) if shap else '—'
                 popup_html = (
                     f"<b>Zone Class:</b> <span style='color:{sfz_color(zone)}'>{zone}</span><br>"
                     f"<b>Bycatch Risk:</b> {risk:.2f}<br>"
-                    f"<b>SHAP Top-3:</b><br>{'<br>'.join(f'• {f}' for f in shap) if shap else '—'}"
+                    f"<b>SHAP Top-3:</b><br>{shap_lines}"
                 )
                 folium.CircleMarker(
                     location=[coords[1], coords[0]],
@@ -429,7 +615,8 @@ elif page == "🎣 Sustainable Fishing Zones":
         feature_counts: dict[str, int] = {}
         for feat in features:
             for f in feat.get("properties", {}).get("shap_top3", []):
-                feature_counts[f] = feature_counts.get(f, 0) + 1
+                fname = f["feature"] if isinstance(f, dict) else str(f)
+                feature_counts[fname] = feature_counts.get(fname, 0) + 1
 
         if feature_counts:
             fc_df = pd.DataFrame(
@@ -482,7 +669,7 @@ elif page == "🎣 Sustainable Fishing Zones":
                             color:white;text-align:center">
                   <h2>Zone: {zone}</h2>
                   <p>Bycatch Risk Score: <b>{risk:.3f}</b></p>
-                  <p>Top SHAP features: <b>{', '.join(shap3)}</b></p>
+                  <p>Top SHAP features: <b>{', '.join(s['feature'] if isinstance(s, dict) else str(s) for s in shap3)}</b></p>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -494,11 +681,13 @@ elif page == "🎣 Sustainable Fishing Zones":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "🐟 Migration Forecast":
-    st.title("🐟 Fish Migration Forecast")
-    st.markdown(
-        "**ConvLSTM (CATCH architecture)** — Spatiotemporal probability heatmap "
-        "with **Monte Carlo Dropout** confidence intervals (N=50 passes)."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #004d40 0%, #00695c 50%, #00796b 100%)">
+        <h1>🐟 Fish Migration Forecast</h1>
+        <p><b>ConvLSTM (CATCH architecture)</b> &mdash; Spatiotemporal probability heatmap
+        with <b>Monte Carlo Dropout</b> confidence intervals (N=50 passes).</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     weeks = st.slider("Weeks ahead", 1, 8, 1)
 
@@ -594,12 +783,14 @@ elif page == "🐟 Migration Forecast":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "💬 RAG Query Interface":
-    st.title("💬 OceanMind RAG Interface")
-    st.markdown(
-        "Ask natural language questions about ocean conditions, fishing zones, "
-        "marine health, or species data. Powered by **LangChain + Llama-3 + FAISS** "
-        "with full **provenance tracing**."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #4a148c 0%, #6a1b9a 50%, #7b1fa2 100%)">
+        <h1>💬 OceanMind RAG Interface</h1>
+        <p>Ask natural language questions about ocean conditions, fishing zones,
+        marine health, or species data. Powered by <b>LangChain + Llama-3 + FAISS</b>
+        with full <b>provenance tracing</b>.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Suggested queries
     st.markdown("**Try asking:**")
@@ -663,11 +854,13 @@ elif page == "💬 RAG Query Interface":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "⛓️ Blockchain Traceability":
-    st.title("⛓️ Catch Traceability Ledger")
-    st.markdown(
-        "**Phase H MVP:** in-memory SHA-256 hash chain (mock ledger). "
-        "Phase 2: replaces with **Hyperledger Fabric 2.5** — API contract identical."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #263238 0%, #37474f 50%, #455a64 100%)">
+        <h1>⛓️ Catch Traceability Ledger</h1>
+        <p><b>Phase H MVP:</b> in-memory SHA-256 hash chain (mock ledger).
+        Phase 2: replaces with <b>Hyperledger Fabric 2.5</b> &mdash; API contract identical.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(["Log Catch", "Verify Transaction", "Chain History"])
 
@@ -680,7 +873,7 @@ elif page == "⛓️ Blockchain Traceability":
                 "Indian Mackerel (AphiaID 217044)":    217044,
                 "Oil Sardine (AphiaID 217033)":        217033,
                 "Giant Tiger Prawn (AphiaID 158966)":  158966,
-                "Yellowfin Tuna (AphiaID 127246)":     127246,
+                "Yellowfin Tuna (AphiaID 127660)":     127660,
             }
             species_label = c1.selectbox("Species", list(species_options.keys()))
             species_aphia = species_options[species_label]
@@ -769,12 +962,14 @@ elif page == "⛓️ Blockchain Traceability":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "🔔 Alerts & Subscriptions":
-    st.title("🔔 Alerts & Subscriptions")
-    st.markdown(
-        "**Phase F:** Zone-change SMS (Twilio) + Firebase FCM push notifications. "
-        "Bhashini voice interface: **Hindi + Tamil** (MVP). "
-        "< 60-second SLA from trigger to delivery."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #e65100 0%, #f57c00 50%, #ff9800 100%)">
+        <h1>🔔 Alerts &amp; Subscriptions</h1>
+        <p><b>Phase F:</b> Zone-change SMS (Twilio) + Firebase FCM push notifications.
+        Bhashini voice interface: <b>Hindi + Tamil</b> (MVP).
+        &lt; 60-second SLA from trigger to delivery.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     tab1, tab2 = st.tabs(["Subscribe", "Demo Alert"])
 
@@ -851,12 +1046,14 @@ elif page == "🔔 Alerts & Subscriptions":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "🔬 Biodiversity & CV":
-    st.title("🔬 Biodiversity & Computer Vision")
-    st.markdown(
-        "**Phase B:** YOLOv8 landing-site fish identification + ResNet101 species ID. "
-        "eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution. "
-        "Milestone species: *R. kanagurta* · *S. longiceps* · *P. monodon*."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #bf360c 0%, #d84315 50%, #e64a19 100%)">
+        <h1>🔬 Biodiversity &amp; Computer Vision</h1>
+        <p><b>Phase B:</b> YOLOv8 landing-site fish ID + ResNet101 species classifier.
+        eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution.<br>
+        Milestone species: <i>R. kanagurta</i> &middot; <i>S. longiceps</i> &middot; <i>P. monodon</i>.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     tab_cv, tab_edna, tab_ref = st.tabs(["📸 CV Fish Analysis", "🧬 eDNA Analysis", "📋 Species Reference"])
 
@@ -998,12 +1195,14 @@ elif page == "🔬 Biodiversity & CV":
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "🌐 Digital Twin Scenarios":
-    st.title("🌐 Digital Twin — MHW Scenario Engine")
-    st.markdown(
-        "**Phase G:** Parameterised SST perturbation → projected MHI score change + migration zone shift. "
-        "Target: **< 30s** compute time. "
-        "Phase 2: Lagrangian IBM (OceanParcels) + larval connectivity + socioecological ABM."
-    )
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #311b92 0%, #4527a0 50%, #512da8 100%)">
+        <h1>🌐 Digital Twin &mdash; MHW Scenario Engine</h1>
+        <p><b>Phase G:</b> Parameterised SST perturbation &rarr; projected MHI score change + migration zone shift.
+        Target: <b>&lt; 30s</b> compute time.
+        Phase 2: Lagrangian IBM (OceanParcels) + larval connectivity + socioecological ABM.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Load presets
     presets_data = api_get("/api/v1/digital-twin/presets")
@@ -1120,3 +1319,181 @@ elif page == "🌐 Digital Twin Scenarios":
                 f"🔬 Model: {scenario['model']} · "
                 f"Phase 2: {scenario['phase2_note']}"
             )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: Bhashini Voice Interface (Phase F)
+# ══════════════════════════════════════════════════════════════════════════════
+
+elif page == "🗣️ Bhashini Voice":
+    st.markdown("""
+    <div class="ocean-hero" style="background:linear-gradient(135deg, #0d47a1 0%, #1565c0 50%, #1976d2 100%)">
+        <h1>🗣️ Bhashini Voice Interface</h1>
+        <p><b>Phase F:</b> Ask OceanMind questions in <b>Hindi</b> or <b>Tamil</b> using voice or text.
+        Pipeline: Bhashini ASR (STT) &rarr; RAG query &rarr; Bhashini TTS.
+        MVP: 2 Indian languages. Phase 2: all 22 scheduled languages.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Language selector
+    lang_options = {
+        "हिन्दी (Hindi)": "hi",
+        "தமிழ் (Tamil)": "ta",
+        "English": "en",
+    }
+
+    col_lang, col_status = st.columns([2, 1])
+    with col_lang:
+        lang_label = st.selectbox("Language", list(lang_options.keys()))
+        lang_code = lang_options[lang_label]
+    with col_status:
+        langs = api_get("/api/v1/voice/languages")
+        if langs:
+            st.metric("Supported Languages", f"{len(langs['languages'])} (MVP)")
+            st.caption(f"Phase 2: {langs['phase2_languages']} languages")
+
+    st.divider()
+
+    tab_text, tab_voice = st.tabs(["⌨️ Text Query", "🎤 Voice Query"])
+
+    # ── Text query tab ─────────────────────────────────────────────────────
+    with tab_text:
+        st.subheader("Type a Question")
+
+        sample_queries = {
+            "hi": "गुजरात के पास समुद्री स्वास्थ्य कैसा है?",
+            "ta": "குஜராத் அருகே கடல் ஆரோக்கியம் எப்படி?",
+            "en": "What is the marine health near Gujarat?",
+        }
+
+        query_text = st.text_area(
+            "Your question",
+            value=sample_queries.get(lang_code, ""),
+            placeholder="Type in your selected language...",
+            height=80,
+        )
+
+        if st.button("🔍 Ask OceanMind", key="voice_text_btn", disabled=not query_text.strip()):
+            with st.spinner("Processing query through Bhashini + RAG pipeline..."):
+                result = api_post("/api/v1/voice/query", {
+                    "text": query_text.strip(),
+                    "language": lang_code,
+                    "tts_enabled": True,
+                })
+
+            if result and "error" not in result:
+                st.subheader("Answer")
+
+                # Localized answer
+                answer = result.get("answer", {})
+                localized = answer.get("localized", "")
+                english = answer.get("english", "")
+
+                if lang_code != "en" and localized:
+                    st.info(localized)
+                    with st.expander("English translation"):
+                        st.write(english)
+                else:
+                    st.info(english)
+
+                # Pipeline info
+                pipeline = result.get("pipeline", {})
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("STT", pipeline.get("stt", "—")[:20])
+                c2.metric("NMT", pipeline.get("nmt", "—")[:20])
+                c3.metric("RAG", pipeline.get("rag", "—")[:20])
+                c4.metric("TTS", pipeline.get("tts", "—")[:20])
+
+                # Provenance
+                prov = result.get("provenance", [])
+                if prov:
+                    st.subheader("Provenance Citations")
+                    prov_df = pd.DataFrame(prov)[[
+                        "source_id", "source_system", "quality_flag",
+                        "relevance_score",
+                    ]].rename(columns={
+                        "source_id": "Source ID",
+                        "source_system": "System",
+                        "quality_flag": "Quality",
+                        "relevance_score": "Relevance",
+                    })
+                    st.dataframe(prov_df, use_container_width=True, hide_index=True)
+
+                # TTS note
+                tts = result.get("tts", {})
+                if tts.get("enabled") and not tts.get("audio_base64"):
+                    st.caption(
+                        "🔊 TTS audio generation requires Bhashini API credentials (Phase 2). "
+                        "Text response shown above."
+                    )
+
+    # ── Voice query tab ────────────────────────────────────────────────────
+    with tab_voice:
+        st.subheader("Speak a Question")
+        st.info(
+            "**Production pipeline:** Record audio → Bhashini ASR transcription → "
+            "RAG answer → Bhashini TTS playback.\n\n"
+            "**MVP:** Click the button below to simulate a voice query in your selected language."
+        )
+
+        if st.button("🎤 Simulate Voice Query", key="voice_sim_btn", use_container_width=True):
+            with st.spinner("Simulating: Audio capture → Bhashini ASR → RAG → TTS..."):
+                result = api_post("/api/v1/voice/query", {
+                    "audio_base64": "SIMULATED_AUDIO_INPUT",
+                    "language": lang_code,
+                    "tts_enabled": True,
+                })
+
+            if result and "error" not in result:
+                query_info = result.get("query", {})
+                answer = result.get("answer", {})
+
+                st.success(f"🎤 Transcribed ({lang_label}): **{query_info.get('original_text', '')}**")
+
+                if lang_code != "en":
+                    st.caption(f"Translated to English: *{query_info.get('english_text', '')}*")
+
+                st.subheader("Answer")
+                localized = answer.get("localized", "")
+                english = answer.get("english", "")
+
+                if lang_code != "en" and localized:
+                    st.info(localized)
+                    with st.expander("English translation"):
+                        st.write(english)
+                else:
+                    st.info(english)
+
+                # Pipeline visualization
+                st.subheader("Voice Pipeline")
+                pipeline = result.get("pipeline", {})
+                st.markdown(f"""
+                ```
+                🎤 Audio Input
+                     │
+                     ▼
+                [{pipeline.get('stt', 'STT')}]
+                     │
+                     ▼
+                [{pipeline.get('nmt', 'NMT')}]
+                     │
+                     ▼
+                [{pipeline.get('rag', 'RAG')}]
+                     │
+                     ▼
+                [{pipeline.get('tts', 'TTS')}]
+                     │
+                     ▼
+                🔊 Audio Output (Phase 2)
+                ```
+                """)
+
+    st.divider()
+    st.markdown("""
+    **Architecture Notes:**
+    - **Bhashini** (bhashini.gov.in) is India's national language AI platform
+    - **ASR** (Automatic Speech Recognition) converts speech → text
+    - **NMT** (Neural Machine Translation) translates between Indian languages and English
+    - **TTS** (Text-to-Speech) converts text → audio response
+    - Phase 2 deploys live Bhashini API for all 22 scheduled Indian languages
+    """)
