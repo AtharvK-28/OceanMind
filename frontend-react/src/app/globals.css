@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-ocean-50: #e0f7fa;
+  --color-ocean-100: #b2ebf2;
+  --color-ocean-200: #80deea;
+  --color-ocean-300: #4fc3f7;
+  --color-ocean-400: #29b6f6;
+  --color-ocean-500: #0288d1;
+  --color-ocean-600: #0277bd;
+  --color-ocean-700: #01579b;
+  --color-ocean-800: #0b1a2e;
+  --color-ocean-900: #06101f;
+  --color-ocean-950: #040d18;
+
+  --color-zone-green: #388e3c;
+  --color-zone-amber: #f9a825;
+  --color-zone-red: #c62828;
+
+  --color-stress-critical: #d32f2f;
+  --color-stress-warning: #f57c00;
+  --color-stress-watch: #fbc02d;
+  --color-stress-normal: #388e3c;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--color-ocean-950);
+  color: #e0e0e0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Recharts tooltip dark theme */
+.recharts-default-tooltip {
+  background: #0b1a2e !important;
+  border: 1px solid rgba(79, 195, 247, 0.2) !important;
+  border-radius: 8px !important;
+}
+
+/* Leaflet popups dark theme */
+.leaflet-popup-content-wrapper {
+  background: #0b1a2e;
+  color: #e0e0e0;
+  border: 1px solid rgba(79, 195, 247, 0.15);
+  border-radius: 10px;
+}
+.leaflet-popup-tip {
+  background: #0b1a2e;
+}
+
+/* ── Live pulse indicator ─────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ── Page enter animation ─────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-page-enter {
+  animation: fadeSlideIn 0.4s ease-out both;
+}
+
+/* ── Staggered children animation ────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-stagger > * {
+  opacity: 0;
+  animation: fadeUp 0.35s ease-out forwards;
+}
+.animate-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.animate-stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.animate-stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.animate-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.animate-stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.animate-stagger > *:nth-child(6) { animation-delay: 0.3s; }
+
+/* ── Data transition fade ────────────────────────────────── */
+@keyframes dataFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-data-enter {
+  animation: dataFadeIn 0.5s ease-out both;
+}
+
+/* ── Skeleton pulse ──────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(79,195,247,0.04) 25%,
+    rgba(79,195,247,0.08) 50%,
+    rgba(79,195,247,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Number count-up pulse ───────────────────────────────── */
+@keyframes numberPop {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-number {
+  animation: numberPop 0.4s ease-out both;
+}
+
+/* ── Smooth range slider ─────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: rgba(79,195,247,0.15);
+  border-radius: 3px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4fc3f7;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(79,195,247,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 14px rgba(79,195,247,0.6);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4fc3f7;
+  cursor: pointer;
+  border: none;
+}
