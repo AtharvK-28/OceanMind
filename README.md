@@ -62,14 +62,14 @@ OceanMind/
 ├── requirements.txt
 │
 ├── backend/
-│   ├── main.py               # FastAPI app (all endpoints)
+│   ├── main.py               # FastAPI app — all Phase A-H endpoints
 │   ├── db/
 │   │   ├── connection.py     # SQLAlchemy + psycopg3 + health check
 │   │   └── schema.sql        # PostGIS schema (all tables)
 │   ├── ingestion/
 │   │   ├── argo_pipeline.py  # ARGO float CTD ingestion (Phase A)
 │   │   ├── incois_pipeline.py# INCOIS SST/Chl-a ingestion (Phase A)
-│   │   └── gfw_pipeline.py   # GFW AIS fishing effort (Phase A) ← NEW
+│   │   └── gfw_pipeline.py   # GFW AIS fishing effort (Phase A)
 │   ├── models/
 │   │   ├── artifacts/        # pre-trained .pkl files
 │   │   ├── mhi.py            # Isolation Forest Marine Health Index (Phase C)
@@ -82,10 +82,12 @@ OceanMind/
 │       └── pipeline.py       # LangChain + Groq + FAISS RAG (Phase E)
 │
 ├── frontend/
-│   └── app.py                # Streamlit dashboard ← NEW
+│   └── app.py                # Streamlit dashboard (10 pages)
 │
 ├── tests/
-│   └── test_phase_a.py       # Phase A integration tests
+│   ├── test_phase_a.py           # Phase A integration tests (DB-dependent)
+│   ├── test_phase_b_and_g.py     # Phase B + G tests (CV, eDNA, Digital Twin)
+│   └── test_phase_c_d_e_f_h.py   # Phase C-H tests (MHI, SFZ, RAG, Voice, Blockchain)
 │
 └── docs/
     ├── OceanMind_PRD.md
@@ -149,17 +151,25 @@ make frontend
 | Phase | Endpoint | Method | Description |
 |-------|----------|--------|-------------|
 | A | `/api/v1/data/bubble?bubble_id=N` | GET | Unified multi-source join via Data Bubble |
+| B | `/api/v1/cv/analyze` | POST | YOLOv8 landing-site fish species ID + length estimation |
+| B | `/api/v1/cv/species-reference` | GET | WoRMS-validated species reference list |
+| B | `/api/v1/edna/analyze` | POST | eDNA metabarcoding pipeline + diversity indices |
 | C | `/api/v1/mhi/status` | GET | MHI grid scores for Indian EEZ |
 | C | `/api/v1/mhi/score` | POST | Single-point MHI score |
-| C | `/api/v1/migration/forecast` | GET | ConvLSTM migration heatmap |
+| C | `/api/v1/migration/forecast` | GET | ConvLSTM migration heatmap with CI bands |
 | D | `/api/v1/sfz/current` | GET | Weekly SFZ GeoJSON + SHAP |
 | D | `/api/v1/sfz/classify` | POST | Classify single location |
-| E | `/api/v1/rag/query` | POST | Natural language marine query |
+| E | `/api/v1/rag/query` | POST | Natural language marine query + provenance |
 | F | `/api/v1/alerts/subscribe` | POST | Register for SMS/FCM alerts |
 | F | `/api/v1/alerts/trigger-demo` | GET | Demo zone-change alert |
+| G | `/api/v1/digital-twin/scenario` | POST | MHW scenario engine (SST perturbation) |
+| G | `/api/v1/digital-twin/presets` | GET | IPCC/MHW scenario presets |
 | H | `/api/v1/trace/catch` | POST | Log catch to blockchain ledger |
 | H | `/api/v1/trace/verify/{tx_id}` | GET | Verify transaction |
 | H | `/api/v1/trace/chain-summary` | GET | Ledger statistics |
+| H | `/api/v1/trace/history` | GET | Catch history (filterable by landing site) |
+| F | `/api/v1/voice/query` | POST | Bhashini voice: STT → RAG → TTS (Hindi/Tamil/English) |
+| F | `/api/v1/voice/languages` | GET | Supported voice languages |
 
 Full interactive docs at `/docs` (Swagger UI).
 
@@ -167,16 +177,16 @@ Full interactive docs at `/docs` (Swagger UI).
 
 ## Phase Status
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| **A** | Data ingestion, schema matching, PostGIS Data Bubbles, AIS QC | ✅ Complete |
-| **B** | Landing-site CV (YOLOv8), eDNA pipeline, WoRMS entity resolution | 🏗 Architecture stub |
-| **C** | ConvLSTM migration forecast, MHI (Isolation Forest) | ✅ Complete |
-| **D** | XGBoost SFZ classifier + SHAP explainability | ✅ Complete |
-| **E** | RAG: LangChain + Groq (llama3-8b) + FAISS + provenance | ✅ Complete |
-| **F** | SMS/FCM alerts, Bhashini voice (Hindi + Tamil) | ✅ Endpoint ready; Twilio/FCM Phase 2 |
-| **G** | Digital twin MHW scenario engine | 🏗 Architecture stub |
-| **H** | Blockchain catch traceability (mock SHA-256 ledger) | ✅ Complete |
+| Phase | Description | Status | Tests |
+|-------|-------------|--------|-------|
+| **A** | Data ingestion, schema matching, PostGIS Data Bubbles, AIS QC | ✅ Complete | `test_phase_a.py` |
+| **B** | Landing-site CV (YOLOv8), eDNA pipeline, WoRMS entity resolution | ✅ Complete (synthetic MVP) | `test_phase_b_and_g.py` |
+| **C** | ConvLSTM migration forecast, MHI (Isolation Forest) | ✅ Complete | `test_phase_c_d_e_f_h.py` |
+| **D** | XGBoost SFZ classifier + SHAP explainability | ✅ Complete | `test_phase_c_d_e_f_h.py` |
+| **E** | RAG: LangChain + Groq (llama3-8b) + FAISS + provenance | ✅ Complete | `test_phase_c_d_e_f_h.py` |
+| **F** | SMS/FCM alerts, Bhashini voice (Hindi + Tamil) | ✅ Endpoint ready; Twilio/FCM Phase 2 | `test_phase_c_d_e_f_h.py` |
+| **G** | Digital twin MHW scenario engine | ✅ Complete | `test_phase_b_and_g.py` |
+| **H** | Blockchain catch traceability (mock SHA-256 ledger) | ✅ Complete | `test_phase_c_d_e_f_h.py` |
 
 ---
 
@@ -208,6 +218,19 @@ GFW AIS (fishing effort) · CMFRI FCSA · IOTC tuna catch-and-effort · FAO Fish
 NCBI SRA + GenBank · IndOBIS · OBIS · BOLD · GBIF · TARA Oceans
 
 All data sources are publicly accessible (DENIED-002: open data only, permanent constraint).
+
+---
+
+## Testing
+
+```bash
+# All tests (no DB required for B/C/D/E/F/G/H)
+python tests/test_phase_b_and_g.py
+python tests/test_phase_c_d_e_f_h.py
+
+# Phase A only (requires running PostGIS)
+python tests/test_phase_a.py
+```
 
 ---
 

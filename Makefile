@@ -64,8 +64,18 @@ docker-down: ## Tear down Docker Compose stack
 test: ## Run test suite
 	$(PYTHON) -m pytest tests/ -v
 
-test-phase-a: ## Run Phase A integration tests
+test-phase-a: ## Run Phase A integration tests (requires PostGIS)
 	$(PYTHON) tests/test_phase_a.py
+
+test-phase-bg: ## Run Phase B + G tests (no DB needed)
+	$(PYTHON) tests/test_phase_b_and_g.py
+
+test-phase-cdefh: ## Run Phase C/D/E/F/H tests (no DB needed)
+	$(PYTHON) tests/test_phase_c_d_e_f_h.py
+
+test-offline: ## Run all tests that don't require PostGIS
+	$(PYTHON) tests/test_phase_b_and_g.py
+	$(PYTHON) tests/test_phase_c_d_e_f_h.py
 
 # ── Code quality ──────────────────────────────────────────────────────────────
 
