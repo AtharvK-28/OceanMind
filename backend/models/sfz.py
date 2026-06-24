@@ -56,7 +56,7 @@ class SFZClassifier:
                         "fishing_effort_h", "wind_stress_curl", "latitude", "longitude", "month"]
         for col in numeric_cols:
             if col in df.columns:
-                df[col] = df[col].astype(float, errors="ignore")
+                df[col] = pd.to_numeric(df[col], errors="coerce")
         if "composite_date" in df.columns:
             df["month"] = pd.to_datetime(df["composite_date"]).dt.month
         elif "month" not in df.columns:
@@ -106,7 +106,6 @@ class SFZClassifier:
                 learning_rate=0.1,
                 subsample=0.8,
                 colsample_bytree=0.8,
-                use_label_encoder=False,
                 eval_metric="mlogloss",
                 random_state=42,
                 n_jobs=-1,
@@ -127,7 +126,6 @@ class SFZClassifier:
             learning_rate=0.05,
             subsample=0.8,
             colsample_bytree=0.8,
-            use_label_encoder=False,
             eval_metric="mlogloss",
             random_state=42,
             n_jobs=-1,

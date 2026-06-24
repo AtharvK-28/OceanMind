@@ -107,12 +107,15 @@ class MockHashChain:
 
     def get_chain_summary(self) -> dict:
         """Return chain statistics (no sensitive data)."""
+        species = list({r["species_name"] for r in self._ledger.values()})
         return {
-            "total_blocks":       len(self._chain),
-            "genesis_hash":       self._genesis_hash[:16] + "...",
-            "latest_block_hash":  self.last_hash[:16] + "...",
-            "ledger_type":        "MOCK_IN_MEMORY",
-            "phase_2_note":       "Replace with Hyperledger Fabric 2.5 at Phase 2.",
+            "total_blocks":          len(self._chain),
+            "total_catch_records":   len(self._ledger),
+            "species_logged":        species,
+            "genesis_hash":          self._genesis_hash[:16] + "...",
+            "latest_block_hash":     self.last_hash[:16] + "...",
+            "ledger_type":           "MOCK_IN_MEMORY",
+            "phase_2_note":          "Replace with Hyperledger Fabric 2.5 at Phase 2.",
         }
 
     def get_catch_history(self, landing_site_id: Optional[str] = None) -> list[dict]:

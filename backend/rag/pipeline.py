@@ -103,7 +103,7 @@ OCEAN_KNOWLEDGE = [
             "is the most important small pelagic fish in Indian waters. Sardinella longiceps (oil sardine, "
             "AphiaID 217033) dominates Kerala and Karnataka landings. Penaeus monodon (giant tiger prawn, "
             "AphiaID 158966) is a high-value aquaculture and wild-catch species. "
-            "Yellowfin tuna (Thunnus albacares, AphiaID 127246) is the primary IOTC-managed tuna species "
+            "Yellowfin tuna (Thunnus albacares, AphiaID 127660) is the primary IOTC-managed tuna species "
             "in the Indian Ocean."
         ),
     },

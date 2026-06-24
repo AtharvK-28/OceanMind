@@ -52,7 +52,7 @@ class MarineHealthIndex:
                         "salinity_psu", "latitude", "longitude", "incois_sst"]
         for col in numeric_cols:
             if col in df.columns:
-                df[col] = df[col].astype(float, errors="ignore")
+                df[col] = pd.to_numeric(df[col], errors="coerce")
         # SST anomaly: deviation from rolling 30-day mean
         if "sst_c" in df.columns:
             rolling_mean = df["sst_c"].rolling(window=30, min_periods=1).mean()
