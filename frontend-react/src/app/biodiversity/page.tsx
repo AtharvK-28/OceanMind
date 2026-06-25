@@ -10,7 +10,11 @@ import DataTable from "@/components/ui/DataTable";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import type { CVAnalyzeResponse, EDNAAnalyzeResponse, SpeciesReferenceResponse } from "@/types/api";
 
-const PIE_COLORS = ["#4fc3f7", "#66bb6a", "#ffa726", "#ef5350", "#ab47bc", "#26c6da", "#ec407a", "#8d6e63"];
+const PIE_COLORS = [
+  "#4fc3f7", "#66bb6a", "#ffa726", "#ef5350", "#ab47bc", "#26c6da", "#ec407a", "#8d6e63",
+  "#7e57c2", "#29b6f6", "#9ccc65", "#ffca28", "#ff7043", "#78909c", "#5c6bc0", "#26a69a",
+  "#d4e157", "#42a5f5", "#bdbdbd",
+];
 
 export default function BiodiversityPage() {
   const [tab, setTab] = useState("cv");
@@ -63,7 +67,7 @@ export default function BiodiversityPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="🔬 Biodiversity & Computer Vision"
-        description="<b>Phase B:</b> YOLOv8 landing-site fish ID + ResNet101 species classifier. eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution."
+        description="<b>Phase B:</b> YOLOv8 landing-site fish detection + ResNet50 species classifier (13 Indian species). eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution."
         gradient="from-[#bf360c] via-[#d84315] to-[#e64a19]"
       />
 
@@ -123,12 +127,14 @@ export default function BiodiversityPage() {
               className="w-full bg-[#e64a19] hover:bg-[#d84315] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
               {cvLoading ? "Running detection..." : cvImage ? "Detect fish species" : "Run with synthetic data"}
             </button>
-            {cvImage && <p className="text-xs text-green-400/60 text-center">Real Roboflow detection will run on your photo</p>}
+            {cvImage && <p className="text-xs text-green-400/60 text-center">YOLOv8 detection + ResNet50 species classifier will run on your photo</p>}
           </form>
           {cvLoading && <LoadingSpinner text="Running CV pipeline..." />}
           {cvResult && !cvLoading && (
             <>
-              <p className="text-green-400 font-medium">Detected <b>{cvResult.total_fish_detected}</b> fish across <b>{Object.keys(cvResult.species_summary).length}</b> species</p>
+              <p className="text-green-400 font-medium">Detected <b>{cvResult.total_fish_detected}</b> fish across <b>{Object.keys(cvResult.species_summary).length}</b> species
+                <span className="text-white/40 text-xs ml-2">({cvResult.model})</span>
+              </p>
               {cvBarData.length > 0 && (
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={cvBarData}><XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 11 }} /><YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} /><Tooltip /><Bar dataKey="count" fill="#e64a19" radius={[6, 6, 0, 0]} /></BarChart>
@@ -138,7 +144,8 @@ export default function BiodiversityPage() {
                 { key: "species_scientific", label: "Species" }, { key: "species_common", label: "Common Name" },
                 { key: "aphia_id", label: "AphiaID" }, { key: "confidence", label: "Confidence" },
                 { key: "fork_length_mm", label: "Fork Length (mm)" }, { key: "estimated_weight_g", label: "Weight (g)" },
-              ]} data={cvResult.detections.map((d) => ({ ...d, confidence: (d.confidence * 100).toFixed(1) + "%" }))} exportFilename="oceanmind_cv_detections" />
+                { key: "source", label: "Source" },
+              ]} data={cvResult.detections.map((d) => ({ ...d, confidence: (d.confidence * 100).toFixed(1) + "%", source: d.source ?? "synthetic" }))} exportFilename="oceanmind_cv_detections" />
             </>
           )}
         </div>

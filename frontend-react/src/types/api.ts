@@ -88,6 +88,7 @@ export interface CVDetection {
   confidence: number;
   fork_length_mm: number;
   estimated_weight_g: number;
+  source?: string;
 }
 
 export interface CVAnalyzeResponse {
