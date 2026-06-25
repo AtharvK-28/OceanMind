@@ -22,6 +22,7 @@ xgboost==2.0.3
 shap==0.45.1
 torch==2.3.0          # CPU-only; remove +cu118 suffix for CPU
 torchvision==0.18.0
+ultralytics>=8.2.0
 
 # ── RAG / NLP ──────────────────────────────────────────────────────────────────
 langchain==0.2.5

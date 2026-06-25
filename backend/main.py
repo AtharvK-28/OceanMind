@@ -996,76 +996,84 @@ class EDNARequest(BaseModel):
 # ── Constants ────────────────────────────────────────────────────────────────
 
 _INDIAN_OCEAN_SPECIES = [
-    {"species": "Rastrelliger kanagurta",   "common": "Indian Mackerel",      "aphia_id": 217044,
-     "a": 0.0058, "b": 3.09, "fl_mean": 220, "fl_std": 30},  # FishBase LWR
-    {"species": "Sardinella longiceps",     "common": "Oil Sardine",           "aphia_id": 217033,
-     "a": 0.0063, "b": 3.05, "fl_mean": 165, "fl_std": 25},
-    {"species": "Penaeus monodon",          "common": "Giant Tiger Prawn",     "aphia_id": 158966,
-     "a": 0.0105, "b": 2.85, "fl_mean": 180, "fl_std": 40},
-    {"species": "Thunnus albacares",        "common": "Yellowfin Tuna",        "aphia_id": 127660,
-     "a": 0.0148, "b": 3.02, "fl_mean": 650, "fl_std": 120},
-    {"species": "Katsuwonus pelamis",       "common": "Skipjack Tuna",         "aphia_id": 127671,
-     "a": 0.0086, "b": 3.24, "fl_mean": 480, "fl_std": 80},
-    {"species": "Scomberomorus commerson",  "common": "Indo-Pacific Kingfish", "aphia_id": 211833,
-     "a": 0.0032, "b": 3.18, "fl_mean": 550, "fl_std": 100},
-    {"species": "Lutjanus argentimaculatus","common": "Mangrove Red Snapper",  "aphia_id": 281571,
-     "a": 0.0120, "b": 3.00, "fl_mean": 350, "fl_std": 60},
-    {"species": "Epinephelus coioides",     "common": "Orange-spotted Grouper","aphia_id": 218255,
-     "a": 0.0110, "b": 3.04, "fl_mean": 380, "fl_std": 70},
+    # ── Original marine/pelagic species ───────────────────────────────
+    {"species": "Rastrelliger kanagurta",    "common": "Indian Mackerel",       "aphia_id": 217044,
+     "a": 0.0058, "b": 3.09, "fl_mean": 220, "fl_std": 30,  "classifier_key": "IndianMackerel"},
+    {"species": "Sardinella longiceps",      "common": "Oil Sardine",           "aphia_id": 217033,
+     "a": 0.0063, "b": 3.05, "fl_mean": 165, "fl_std": 25,  "classifier_key": "IndianOilSardine"},
+    {"species": "Penaeus monodon",           "common": "Giant Tiger Prawn",     "aphia_id": 158966,
+     "a": 0.0105, "b": 2.85, "fl_mean": 180, "fl_std": 40,  "classifier_key": None},
+    {"species": "Thunnus albacares",         "common": "Yellowfin Tuna",        "aphia_id": 127660,
+     "a": 0.0148, "b": 3.02, "fl_mean": 650, "fl_std": 120, "classifier_key": None},
+    {"species": "Katsuwonus pelamis",        "common": "Skipjack Tuna",         "aphia_id": 127671,
+     "a": 0.0086, "b": 3.24, "fl_mean": 480, "fl_std": 80,  "classifier_key": None},
+    {"species": "Scomberomorus commerson",   "common": "Indo-Pacific Kingfish", "aphia_id": 211833,
+     "a": 0.0032, "b": 3.18, "fl_mean": 550, "fl_std": 100, "classifier_key": None},
+    {"species": "Lutjanus argentimaculatus", "common": "Mangrove Red Snapper",  "aphia_id": 281571,
+     "a": 0.0120, "b": 3.00, "fl_mean": 350, "fl_std": 60,  "classifier_key": None},
+    {"species": "Epinephelus coioides",      "common": "Orange-spotted Grouper","aphia_id": 218255,
+     "a": 0.0110, "b": 3.04, "fl_mean": 380, "fl_std": 70,  "classifier_key": None},
+    # ── Species from trained image classifier ─────────────────────────
+    {"species": "Harpadon nehereus",         "common": "Bombay Duck",           "aphia_id": 217593,
+     "a": 0.0020, "b": 3.10, "fl_mean": 200, "fl_std": 40,  "classifier_key": "BombayDuck"},
+    {"species": "Labeo catla",               "common": "Catla",                 "aphia_id": 322872,
+     "a": 0.0100, "b": 3.00, "fl_mean": 400, "fl_std": 80,  "classifier_key": "Catla"},
+    {"species": "Tenualosa ilisha",          "common": "Hilsa Shad",            "aphia_id": 277274,
+     "a": 0.0070, "b": 3.02, "fl_mean": 300, "fl_std": 50,  "classifier_key": "Hilsa"},
+    {"species": "Pangasius pangasius",       "common": "Yellowtail Catfish",    "aphia_id": 307991,
+     "a": 0.0090, "b": 2.95, "fl_mean": 350, "fl_std": 70,  "classifier_key": "IndiaBasa"},
+    {"species": "Eleutheronema tetradactylum","common": "Indian Salmon",        "aphia_id": 280720,
+     "a": 0.0065, "b": 3.08, "fl_mean": 450, "fl_std": 90,  "classifier_key": "IndianSalmon"},
+    {"species": "Cirrhinus cirrhosus",       "common": "Mrigal Carp",           "aphia_id": 322874,
+     "a": 0.0085, "b": 3.00, "fl_mean": 350, "fl_std": 60,  "classifier_key": "Mrigal"},
+    {"species": "Pampus argenteus",          "common": "Silver Pomfret",        "aphia_id": 218485,
+     "a": 0.0150, "b": 2.90, "fl_mean": 250, "fl_std": 45,  "classifier_key": "Pomfret"},
+    {"species": "Trichiurus lepturus",       "common": "Largehead Hairtail",    "aphia_id": 127188,
+     "a": 0.0010, "b": 3.30, "fl_mean": 600, "fl_std": 120, "classifier_key": "Ribbonfishes"},
+    {"species": "Labeo rohita",              "common": "Rohu",                  "aphia_id": 322877,
+     "a": 0.0100, "b": 3.00, "fl_mean": 400, "fl_std": 80,  "classifier_key": "Rohu"},
+    {"species": "Lates calcarifer",          "common": "Barramundi / Sea Bass", "aphia_id": 278757,
+     "a": 0.0090, "b": 3.05, "fl_mean": 450, "fl_std": 100, "classifier_key": "SeaBass"},
+    {"species": "Scomberomorus guttatus",    "common": "Indo-Pacific Seer Fish","aphia_id": 211834,
+     "a": 0.0040, "b": 3.15, "fl_mean": 500, "fl_std": 90,  "classifier_key": "SeerFish"},
 ]
+
+_CLASSIFIER_KEY_TO_SPECIES = {
+    sp["classifier_key"]: sp for sp in _INDIAN_OCEAN_SPECIES if sp["classifier_key"]
+}
 
 # Regional species abundance profiles (CMFRI FCSA 2023 catch composition data)
 # Weights = relative probability of each species at a landing site in that region
 _REGIONAL_SPECIES_WEIGHTS = {
-    "KERALA": {          # Kochi, Vizhinjam — sardine + mackerel dominated
-        217033: 0.30,    # Oil sardine — 30% of Kerala landings
-        217044: 0.25,    # Indian mackerel
-        158966: 0.10,    # Tiger prawn (backwater fishery)
-        127660: 0.05,    # Yellowfin tuna (deep sea)
-        127671: 0.05,    # Skipjack
-        211833: 0.08,    # Kingfish
-        281571: 0.07,    # Red snapper
-        218255: 0.10,    # Grouper
+    "KERALA": {
+        217033: 0.18,  217044: 0.15,  158966: 0.06,  127660: 0.03,  127671: 0.03,
+        211833: 0.05,  281571: 0.04,  218255: 0.06,  217593: 0.02,  322872: 0.02,
+        277274: 0.03,  307991: 0.02,  280720: 0.05,  322874: 0.02,  218485: 0.06,
+        127188: 0.08,  322877: 0.02,  278757: 0.05,  211834: 0.06,
     },
-    "GUJARAT": {         # Veraval — mackerel + Bombay duck region
-        217044: 0.30,    # Indian mackerel — Gujarat top catch
-        217033: 0.05,    # Oil sardine (less in Gujarat)
-        158966: 0.15,    # Tiger prawn (major Gujarat export)
-        127660: 0.05,    # Yellowfin
-        127671: 0.03,    # Skipjack
-        211833: 0.15,    # Kingfish (seer fish — Gujarat specialty)
-        281571: 0.12,    # Red snapper
-        218255: 0.15,    # Grouper
+    "GUJARAT": {
+        217044: 0.12,  217033: 0.03,  158966: 0.08,  127660: 0.03,  127671: 0.02,
+        211833: 0.08,  281571: 0.05,  218255: 0.06,  217593: 0.15,  322872: 0.02,
+        277274: 0.04,  307991: 0.02,  280720: 0.06,  322874: 0.02,  218485: 0.10,
+        127188: 0.05,  322877: 0.02,  278757: 0.02,  211834: 0.06,
     },
-    "TAMILNADU": {       # Chennai — tuna + pelagics
-        217044: 0.15,    # Mackerel
-        217033: 0.10,    # Sardine
-        158966: 0.08,    # Prawn
-        127660: 0.20,    # Yellowfin tuna — TN deep sea fleet
-        127671: 0.15,    # Skipjack tuna
-        211833: 0.12,    # Kingfish
-        281571: 0.10,    # Red snapper
-        218255: 0.10,    # Grouper
+    "TAMILNADU": {
+        217044: 0.10,  217033: 0.06,  158966: 0.05,  127660: 0.12,  127671: 0.10,
+        211833: 0.07,  281571: 0.06,  218255: 0.06,  217593: 0.02,  322872: 0.02,
+        277274: 0.03,  307991: 0.02,  280720: 0.04,  322874: 0.02,  218485: 0.06,
+        127188: 0.06,  322877: 0.02,  278757: 0.04,  211834: 0.08,
     },
-    "ANDAMAN": {         # Andaman — reef fish + tuna
-        217044: 0.08,    # Mackerel (less)
-        217033: 0.03,    # Sardine (rare)
-        158966: 0.05,    # Prawn
-        127660: 0.25,    # Yellowfin tuna — primary Andaman catch
-        127671: 0.20,    # Skipjack tuna
-        211833: 0.05,    # Kingfish
-        281571: 0.12,    # Red snapper (reef)
-        218255: 0.22,    # Grouper (reef fish dominant)
+    "ANDAMAN": {
+        217044: 0.05,  217033: 0.02,  158966: 0.03,  127660: 0.18,  127671: 0.14,
+        211833: 0.03,  281571: 0.08,  218255: 0.15,  217593: 0.02,  322872: 0.01,
+        277274: 0.02,  307991: 0.01,  280720: 0.03,  322874: 0.01,  218485: 0.03,
+        127188: 0.03,  322877: 0.01,  278757: 0.10,  211834: 0.04,
     },
-    "BENGAL": {          # Visakhapatnam, Odisha — mixed
-        217044: 0.20,    # Mackerel
-        217033: 0.15,    # Sardine
-        158966: 0.15,    # Tiger prawn (major BoB export)
-        127660: 0.08,    # Yellowfin
-        127671: 0.07,    # Skipjack
-        211833: 0.12,    # Kingfish
-        281571: 0.13,    # Red snapper
-        218255: 0.10,    # Grouper
+    "BENGAL": {
+        217044: 0.08,  217033: 0.06,  158966: 0.08,  127660: 0.04,  127671: 0.03,
+        211833: 0.05,  281571: 0.05,  218255: 0.04,  217593: 0.05,  322872: 0.05,
+        277274: 0.15,  307991: 0.04,  280720: 0.04,  322874: 0.05,  218485: 0.04,
+        127188: 0.04,  322877: 0.06,  278757: 0.03,  211834: 0.04,
     },
 }
 
@@ -1083,7 +1091,11 @@ def _get_region_for_coords(lat: float, lon: float) -> str:
     return "TAMILNADU"
 
 YOLO_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "models", "fish_yolov8.pt")
+CLASSIFIER_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "models", "fish_classifier.pt")
 _yolo_model = None
+_classifier_model = None
+_classifier_class_names: list[str] = []
+_classifier_transform = None
 
 
 def _get_yolo_model():
@@ -1099,10 +1111,62 @@ def _get_yolo_model():
     return _yolo_model
 
 
+def _get_classifier():
+    """Lazy-load the ResNet50 fish species classifier."""
+    global _classifier_model, _classifier_class_names, _classifier_transform
+    if _classifier_model is not None:
+        return _classifier_model, _classifier_class_names, _classifier_transform
+    if not os.path.exists(CLASSIFIER_MODEL_PATH):
+        return None, [], None
+    try:
+        import torch
+        from torchvision import models, transforms
+
+        checkpoint = torch.load(CLASSIFIER_MODEL_PATH, map_location="cpu", weights_only=False)
+        _classifier_class_names = checkpoint["class_names"]
+        num_classes = checkpoint["num_classes"]
+
+        model = models.resnet50(weights=None)
+        model.fc = torch.nn.Sequential(
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(2048, 512),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.2),
+            torch.nn.Linear(512, num_classes),
+        )
+        model.load_state_dict(checkpoint["state_dict"])
+        model.eval()
+        _classifier_model = model
+
+        mean = checkpoint.get("normalize_mean", [0.485, 0.456, 0.406])
+        std = checkpoint.get("normalize_std", [0.229, 0.224, 0.225])
+        img_size = checkpoint.get("img_size", 224)
+        _classifier_transform = transforms.Compose([
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std),
+        ])
+        logger.info(f"Fish classifier loaded: {num_classes} species — {_classifier_class_names}")
+    except Exception as e:
+        logger.warning(f"Failed to load fish classifier: {e}")
+    return _classifier_model, _classifier_class_names, _classifier_transform
+
+
+def _classify_species(img_crop, class_names, model, transform) -> tuple[str, float]:
+    """Classify a PIL image crop into a species. Returns (class_name, confidence)."""
+    import torch
+    tensor = transform(img_crop.convert("RGB")).unsqueeze(0)
+    with torch.no_grad():
+        logits = model(tensor)
+        probs = torch.softmax(logits, dim=1)
+        conf, idx = probs.max(1)
+    return class_names[idx.item()], float(conf.item())
+
+
 def _yolo_detect(image_base64: str, region: str) -> list[dict]:
-    """Run YOLOv8 fish detection on a base64 image, map to Indian species."""
-    model = _get_yolo_model()
-    if model is None:
+    """Run YOLOv8 detection + ResNet50 species classification on a base64 image."""
+    yolo = _get_yolo_model()
+    if yolo is None:
         return []
     try:
         import base64, io
@@ -1111,29 +1175,44 @@ def _yolo_detect(image_base64: str, region: str) -> list[dict]:
         img_bytes = base64.b64decode(image_base64)
         img = Image.open(io.BytesIO(img_bytes))
 
-        results = model.predict(img, conf=0.3, verbose=False)
+        results = yolo.predict(img, conf=0.3, verbose=False)
         boxes = results[0].boxes
         if len(boxes) == 0:
             return []
 
-        # Map detected fish to regional Indian species
-        weights_map = _REGIONAL_SPECIES_WEIGHTS.get(region, _REGIONAL_SPECIES_WEIGHTS["KERALA"])
-        species_ids = [sp["aphia_id"] for sp in _INDIAN_OCEAN_SPECIES]
-        weights = np.array([weights_map.get(sid, 0.05) for sid in species_ids])
-        weights = weights / weights.sum()
+        classifier, class_names, clf_transform = _get_classifier()
         rng = np.random.default_rng(seed=42)
 
         detections = []
         for i, box in enumerate(boxes):
-            yolo_cls = model.names[int(box.cls)]
-            conf = float(box.conf)
+            yolo_cls = yolo.names[int(box.cls)]
+            yolo_conf = float(box.conf)
             x1, y1, x2, y2 = [int(v) for v in box.xyxy[0]]
 
-            # Map to Indian species using regional weights
-            sp_idx = rng.choice(len(_INDIAN_OCEAN_SPECIES), p=weights)
-            sp = _INDIAN_OCEAN_SPECIES[sp_idx]
+            sp = None
+            species_conf = yolo_conf
+            source = "yolov8_detection"
+
+            if classifier is not None and clf_transform is not None:
+                crop = img.crop((x1, y1, x2, y2))
+                cls_name, cls_conf = _classify_species(crop, class_names, classifier, clf_transform)
+                sp = _CLASSIFIER_KEY_TO_SPECIES.get(cls_name)
+                if sp is not None:
+                    species_conf = round(cls_conf, 3)
+                    source = "yolov8+resnet50_classifier"
+
+            if sp is None:
+                weights_map = _REGIONAL_SPECIES_WEIGHTS.get(region, _REGIONAL_SPECIES_WEIGHTS["KERALA"])
+                species_ids = [s["aphia_id"] for s in _INDIAN_OCEAN_SPECIES]
+                weights = np.array([weights_map.get(sid, 0.01) for sid in species_ids])
+                weights = weights / weights.sum()
+                sp_idx = rng.choice(len(_INDIAN_OCEAN_SPECIES), p=weights)
+                sp = _INDIAN_OCEAN_SPECIES[sp_idx]
+
             bbox_w_px = x2 - x1
-            est_fork_mm = float(np.clip(bbox_w_px * 0.8 + rng.normal(0, 20), 80, 800))
+            est_fork_mm = float(np.clip(
+                rng.normal(sp["fl_mean"], sp["fl_std"]), 50, 1200
+            ))
             est_weight_g = float(sp["a"] * (est_fork_mm ** sp["b"]))
 
             detections.append({
@@ -1142,18 +1221,18 @@ def _yolo_detect(image_base64: str, region: str) -> list[dict]:
                 "species_common": sp["common"],
                 "aphia_id": sp["aphia_id"],
                 "worms": _worms_lookup(sp["aphia_id"]),
-                "confidence": round(conf, 3),
+                "confidence": species_conf,
                 "fork_length_mm": round(est_fork_mm, 1),
                 "estimated_weight_g": round(est_weight_g, 1),
                 "yolo_raw_class": yolo_cls,
                 "bounding_box": {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
-                "source": "yolov8_real_detection",
+                "source": source,
             })
 
-        logger.info(f"YOLOv8 detected {len(detections)} fish in image.")
+        logger.info(f"Detected {len(detections)} fish in image.")
         return detections
     except Exception as e:
-        logger.warning(f"YOLOv8 inference error: {e}")
+        logger.warning(f"CV inference error: {e}")
         return []
 
 
@@ -1191,11 +1270,13 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
     detections = []
     cv_model = "synthetic (no image provided)"
 
-    # Real detection via YOLOv8 if image provided
     if req.image_base64:
         yolo_dets = _yolo_detect(req.image_base64, region)
         if yolo_dets:
-            cv_model = f"YOLOv8 fish detection ({len(yolo_dets)} detections)"
+            has_clf = any(d["source"] == "yolov8+resnet50_classifier" for d in yolo_dets)
+            cv_model = (f"YOLOv8 + ResNet50 classifier ({len(yolo_dets)} detections)"
+                        if has_clf
+                        else f"YOLOv8 detection ({len(yolo_dets)} detections)")
             for d in yolo_dets:
                 d["region"] = region
             detections = yolo_dets
@@ -1248,14 +1329,11 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
         "detections": detections,
         "model": cv_model,
         "pipeline_stages": [
-            "geometric_correction",
-            "pixel_calibration",
             "yolov8_detection",
-            "resnet101_species_id",
+            "resnet50_species_classifier",
             "length_weight_estimation",
         ],
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
-        "note": "Production: deploy YOLOv8/v9 weights trained on Indian Ocean species dataset",
     }
 
 
