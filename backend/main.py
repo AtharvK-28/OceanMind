@@ -6,11 +6,12 @@ Docs: http://localhost:8000/docs
 import json
 import os
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from typing import Optional
 
 import numpy as np
 import pandas as pd
+import httpx
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -1729,4 +1730,218 @@ async def scenario_presets():
             },
         ],
         "note": "Presets derived from IPCC AR6 WGI Chapter 9 + INCOIS historical MHW catalogue",
+    }
+
+
+# =============================================================================
+# Real-Time Fishing Advisory (Open-Meteo Marine API — free, no key)
+# =============================================================================
+
+OPEN_METEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
+OPEN_METEO_WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+class FishingAdvisoryRequest(BaseModel):
+    lat: float = Field(8.5, ge=-90, le=90, description="Latitude")
+    lon: float = Field(76.9, ge=-180, le=180, description="Longitude")
+    site_name: Optional[str] = Field(None, description="Location name")
+
+
+async def _fetch_marine_data(lat: float, lon: float) -> dict:
+    """Fetch real-time marine + weather data from Open-Meteo (7-day history + 3-day forecast)."""
+    async with httpx.AsyncClient(timeout=15) as client:
+        marine_resp, weather_resp = await asyncio.gather(
+            client.get(OPEN_METEO_MARINE_URL, params={
+                "latitude": lat, "longitude": lon,
+                "hourly": "wave_height,wave_period,wave_direction,sea_surface_temperature",
+                "past_days": 7, "forecast_days": 3,
+            }),
+            client.get(OPEN_METEO_WEATHER_URL, params={
+                "latitude": lat, "longitude": lon,
+                "hourly": "wind_speed_10m,wind_direction_10m,cloud_cover",
+                "past_days": 7, "forecast_days": 3,
+            }),
+        )
+        marine = marine_resp.json() if marine_resp.status_code == 200 else {}
+        weather = weather_resp.json() if weather_resp.status_code == 200 else {}
+    return {"marine": marine, "weather": weather}
+
+
+def _compute_advisory(marine: dict, weather: dict, lat: float, lon: float) -> dict:
+    """Compute fishing advisory scores from raw Open-Meteo data."""
+    m_hourly = marine.get("hourly", {})
+    w_hourly = weather.get("hourly", {})
+
+    times = m_hourly.get("time", [])
+    sst_vals = m_hourly.get("sea_surface_temperature", [])
+    wave_vals = m_hourly.get("wave_height", [])
+    wave_period = m_hourly.get("wave_period", [])
+    wind_vals = w_hourly.get("wind_speed_10m", [])
+    cloud_vals = w_hourly.get("cloud_cover", [])
+
+    if not times:
+        return {"error": "No marine data available for this location"}
+
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:")
+    now_idx = len(times) - 1
+    for i, t in enumerate(times):
+        if t >= now_str:
+            now_idx = i
+            break
+
+    past_24h = slice(max(0, now_idx - 24), now_idx)
+    past_7d = slice(0, now_idx)
+    forecast = slice(now_idx, min(len(times), now_idx + 72))
+
+    def _safe_mean(arr, s):
+        vals = [v for v in arr[s] if v is not None]
+        return round(np.mean(vals), 2) if vals else None
+
+    def _safe_series(arr, time_arr, s, step=6):
+        result = []
+        for i in range(s.start, min(s.stop, len(arr)), step):
+            if i < len(arr) and arr[i] is not None and i < len(time_arr):
+                result.append({"time": time_arr[i], "value": round(arr[i], 2)})
+        return result
+
+    current_sst = sst_vals[now_idx] if now_idx < len(sst_vals) and sst_vals[now_idx] is not None else None
+    current_wave = wave_vals[now_idx] if now_idx < len(wave_vals) and wave_vals[now_idx] is not None else None
+    current_wind = wind_vals[now_idx] if now_idx < len(wind_vals) and wind_vals[now_idx] is not None else None
+
+    sst_7d_mean = _safe_mean(sst_vals, past_7d)
+    sst_trend = None
+    if current_sst is not None and sst_7d_mean is not None:
+        sst_trend = round(current_sst - sst_7d_mean, 2)
+
+    # Fishing potential score (0–100)
+    score = 50.0
+    reasons_good = []
+    reasons_bad = []
+
+    if current_sst is not None:
+        if 26 <= current_sst <= 30:
+            score += 15
+            reasons_good.append(f"SST {current_sst}°C is in optimal range (26–30°C)")
+        elif 24 <= current_sst < 26 or 30 < current_sst <= 32:
+            score += 5
+        else:
+            score -= 15
+            reasons_bad.append(f"SST {current_sst}°C is outside productive range")
+
+    if sst_trend is not None and abs(sst_trend) >= 0.3:
+        score += 10
+        reasons_good.append(f"SST front detected (Δ{sst_trend:+.1f}°C vs 7-day mean)")
+
+    if current_wave is not None:
+        if current_wave < 1.5:
+            score += 15
+            reasons_good.append(f"Calm seas ({current_wave}m waves)")
+        elif current_wave < 2.5:
+            score += 5
+        else:
+            score -= 20
+            reasons_bad.append(f"Rough seas ({current_wave}m waves) — unsafe for small craft")
+
+    if current_wind is not None:
+        if current_wind < 20:
+            score += 10
+            reasons_good.append(f"Light wind ({current_wind} km/h)")
+        elif current_wind < 35:
+            score += 0
+        else:
+            score -= 20
+            reasons_bad.append(f"Strong wind ({current_wind} km/h) — hazardous")
+
+    region = _get_region_for_coords(lat, lon)
+    month = datetime.now().month
+    if month in (6, 7, 8, 9) and region in ("KERALA", "GUJARAT"):
+        score -= 15
+        reasons_bad.append("Southwest monsoon active — fishing ban may apply")
+
+    score = max(0, min(100, score))
+
+    if score >= 70:
+        recommendation = "GO"
+        recommendation_text = "Good conditions for fishing"
+    elif score >= 40:
+        recommendation = "CAUTION"
+        recommendation_text = "Moderate conditions — exercise caution"
+    else:
+        recommendation = "AVOID"
+        recommendation_text = "Poor conditions — consider postponing"
+
+    # Best windows in forecast
+    best_windows = []
+    for i in range(now_idx, min(len(times), now_idx + 72), 3):
+        w_score = 50
+        if i < len(sst_vals) and sst_vals[i] is not None and 26 <= sst_vals[i] <= 30:
+            w_score += 15
+        if i < len(wave_vals) and wave_vals[i] is not None and wave_vals[i] < 1.5:
+            w_score += 15
+        if i < len(wind_vals) and wind_vals[i] is not None and wind_vals[i] < 20:
+            w_score += 10
+        if w_score >= 70 and i < len(times):
+            best_windows.append({"time": times[i], "score": min(100, w_score)})
+
+    return {
+        "current": {
+            "sst_c": current_sst,
+            "wave_height_m": current_wave,
+            "wave_period_s": wave_period[now_idx] if now_idx < len(wave_period) and wave_period[now_idx] is not None else None,
+            "wind_speed_kmh": current_wind,
+            "cloud_cover_pct": cloud_vals[now_idx] if now_idx < len(cloud_vals) and cloud_vals[now_idx] is not None else None,
+        },
+        "sst_7d_mean": sst_7d_mean,
+        "sst_trend_c": sst_trend,
+        "fishing_score": round(score),
+        "recommendation": recommendation,
+        "recommendation_text": recommendation_text,
+        "reasons_good": reasons_good,
+        "reasons_bad": reasons_bad,
+        "best_windows": best_windows[:8],
+        "sst_history": _safe_series(sst_vals, times, past_7d),
+        "wave_forecast": _safe_series(wave_vals, times, forecast, step=3),
+        "wind_forecast": _safe_series(wind_vals, times, forecast, step=3),
+    }
+
+
+import asyncio
+
+@app.post("/api/v1/fishing/advisory", tags=["Fishing Advisory"])
+async def fishing_advisory(req: FishingAdvisoryRequest):
+    """
+    Real-time fishing advisory powered by Open-Meteo Marine API.
+
+    Pulls live SST, wave height, wind speed, and cloud cover data
+    (7-day history + 3-day forecast) and computes a fishing potential
+    score (0–100) with GO / CAUTION / AVOID recommendation.
+
+    Data source: Open-Meteo (free, no API key — CC-BY 4.0).
+    """
+    if not _is_ocean(req.lat, req.lon):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Coordinates ({req.lat}, {req.lon}) are on land. Provide ocean coordinates within the Indian EEZ.",
+        )
+
+    try:
+        raw = await _fetch_marine_data(req.lat, req.lon)
+    except Exception as e:
+        logger.warning(f"Open-Meteo fetch failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Failed to fetch marine data: {e}")
+
+    advisory = _compute_advisory(raw["marine"], raw["weather"], req.lat, req.lon)
+
+    region = _get_region_for_coords(req.lat, req.lon)
+
+    return {
+        "site": {
+            "lat": req.lat,
+            "lon": req.lon,
+            "name": req.site_name or "Fishing site",
+            "region": region,
+        },
+        "advisory": advisory,
+        "data_source": "Open-Meteo Marine API (ERA5-Marine + GFS)",
+        "queried_at": datetime.now(timezone.utc).isoformat(),
     }
