@@ -56,7 +56,7 @@ export default function DigitalTwinPage() {
 
   const migPoints: MarkerPoint[] = (result?.migration_shift?.data ?? []).map((p) => ({
     lat: p.lat, lng: p.lon,
-    color: p.delta_prob > 0 ? "#4fc3f7" : p.delta_prob < -0.05 ? "#ef5350" : "#78909c",
+    color: p.delta_prob > 0 ? "#1f7a8c" : p.delta_prob < -0.05 ? "#c25a44" : "#8a9698",
     radius: 5, fillOpacity: 0.6,
     tooltip: `Δprob: ${p.delta_prob > 0 ? "+" : ""}${p.delta_prob.toFixed(3)}`,
   }));
@@ -64,50 +64,49 @@ export default function DigitalTwinPage() {
   return (
     <div className="animate-page-enter">
       <HeroBanner
-        title="🌐 Digital Twin — MHW Scenario Engine"
+        title="Digital Twin — MHW Scenario Engine"
         description="<b>Phase G:</b> Parameterised SST perturbation → projected MHI score change + migration zone shift. Target: <b>&lt; 30s</b> compute."
-        gradient="from-[#311b92] via-[#4527a0] to-[#512da8]"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Scenario</h3>
+          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">Scenario</h3>
 
           <label className="block">
-            <span className="text-xs text-white/50">Preset</span>
+            <span className="text-xs text-text-muted">Preset</span>
             <select value={preset} onChange={(e) => applyPreset(e.target.value)}
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text">
               <option value="custom">— Custom —</option>
               {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
 
           <label className="block">
-            <span className="text-xs text-white/50">SST Perturbation: <b className="text-white">{sstDelta > 0 ? "+" : ""}{sstDelta}°C</b></span>
+            <span className="text-xs text-text-muted">SST Perturbation: <b className="text-text">{sstDelta > 0 ? "+" : ""}{sstDelta}°C</b></span>
             <input type="range" min={-5} max={10} step={0.5} value={sstDelta} onChange={(e) => setSstDelta(+e.target.value)}
-              className="w-full accent-[#4fc3f7]" />
+              className="w-full accent-accent" />
           </label>
 
           <label className="block">
-            <span className="text-xs text-white/50">Duration: <b className="text-white">{duration} weeks</b></span>
+            <span className="text-xs text-text-muted">Duration: <b className="text-text">{duration} weeks</b></span>
             <input type="range" min={1} max={52} value={duration} onChange={(e) => setDuration(+e.target.value)}
-              className="w-full accent-[#4fc3f7]" />
+              className="w-full accent-accent" />
           </label>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm text-white/70">
-              <input type="checkbox" checked={inclMhi} onChange={(e) => setInclMhi(e.target.checked)} className="accent-[#4fc3f7]" />
+            <label className="flex items-center gap-2 text-sm text-text-muted">
+              <input type="checkbox" checked={inclMhi} onChange={(e) => setInclMhi(e.target.checked)} className="accent-[#1f7a8c]" />
               Include MHI Projection
             </label>
-            <label className="flex items-center gap-2 text-sm text-white/70">
-              <input type="checkbox" checked={inclMig} onChange={(e) => setInclMig(e.target.checked)} className="accent-[#4fc3f7]" />
+            <label className="flex items-center gap-2 text-sm text-text-muted">
+              <input type="checkbox" checked={inclMig} onChange={(e) => setInclMig(e.target.checked)} className="accent-[#1f7a8c]" />
               Include Migration Shift
             </label>
           </div>
 
           <button onClick={runScenario} disabled={running}
-            className="w-full bg-[#512da8] hover:bg-[#4527a0] text-white rounded-lg py-3 font-semibold transition-colors disabled:opacity-50">
-            {running ? "Running..." : "🚀 Run Scenario"}
+            className="w-full bg-accent hover:bg-accent-dark text-white rounded-lg py-3 font-semibold transition-colors disabled:opacity-50">
+            {running ? "Running..." : "Run Scenario"}
           </button>
         </div>
 
@@ -118,30 +117,30 @@ export default function DigitalTwinPage() {
             <div className="animate-data-enter">
               <div className="flex items-center gap-4 mb-4">
                 <ResultBadge label={result.scenario.severity} color={severityColors[result.scenario.severity] ?? "#9e9e9e"} size="lg" />
-                <span className="text-white/70 text-sm">{result.scenario.name}</span>
+                <span className="text-text-muted text-sm">{result.scenario.name}</span>
               </div>
 
               {result.mhi_projection && (
                 <div className="space-y-4">
-                  <h3 className="text-base font-semibold text-white/90">🌡️ Marine Health Index Projection</h3>
+                  <h3 className="text-base font-semibold text-text"><i className="ph ph-thermometer mr-2" />Marine Health Index Projection</h3>
                   <div className="grid grid-cols-3 gap-3">
                     <MetricCard label="Grid Points" value={result.mhi_projection.grid_points} />
                     <MetricCard label="Avg ΔMHI" value={`${result.mhi_projection.avg_delta_mhi > 0 ? "+" : ""}${result.mhi_projection.avg_delta_mhi.toFixed(1)}`} />
                     <MetricCard label="Critical/Warning" value={result.mhi_projection.critical_cells} deltaColor="red" />
                   </div>
-                  <p className="text-sm text-white/60">{result.mhi_projection.summary}</p>
+                  <p className="text-sm text-text-muted">{result.mhi_projection.summary}</p>
                   <MapContainer height="380px" points={mhiPoints} />
                 </div>
               )}
 
               {result.migration_shift && (
                 <div className="space-y-4">
-                  <h3 className="text-base font-semibold text-white/90">🐟 Migration Zone Shift</h3>
+                  <h3 className="text-base font-semibold text-text"><i className="ph ph-fish mr-2" />Migration Zone Shift</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <MetricCard label="Poleward Shift" value={`${result.migration_shift.poleward_shift_deg > 0 ? "+" : ""}${result.migration_shift.poleward_shift_deg.toFixed(2)}°`} />
                     <MetricCard label="Grid Points" value={result.migration_shift.grid_points} />
                   </div>
-                  <p className="text-sm text-white/60">{result.migration_shift.summary}</p>
+                  <p className="text-sm text-text-muted">{result.migration_shift.summary}</p>
                   <MapContainer height="380px" points={migPoints} />
                 </div>
               )}
@@ -149,39 +148,39 @@ export default function DigitalTwinPage() {
               {/* Species Impact Assessment */}
               {(result as any).species_impact && (
                 <div className="space-y-4">
-                  <h3 className="text-base font-semibold text-white/90">🧬 Species Impact Assessment</h3>
+                  <h3 className="text-base font-semibold text-text"><i className="ph ph-dna mr-2" />Species Impact Assessment</h3>
                   <div className="grid grid-cols-3 gap-3">
                     <MetricCard label="Collapse Risk" value={(result as any).species_impact.collapse_risk_count} deltaColor="red" />
                     <MetricCard label="High Stress" value={(result as any).species_impact.high_stress_count} deltaColor="amber" />
                     <MetricCard label="Species Assessed" value={(result as any).species_impact.species.length} />
                   </div>
-                  <p className="text-sm text-white/60">{(result as any).species_impact.summary}</p>
+                  <p className="text-sm text-text-muted">{(result as any).species_impact.summary}</p>
 
-                  <div className="overflow-x-auto rounded-lg border border-white/8">
+                  <div className="overflow-x-auto rounded-lg border border-card-border">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-white/5">
-                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-white/50 font-semibold">Species</th>
-                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-white/50 font-semibold">Shift</th>
-                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-white/50 font-semibold">Abundance</th>
-                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-white/50 font-semibold">Status</th>
-                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-white/50 font-semibold">Note</th>
+                        <tr className="bg-card-hover">
+                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-text-muted font-semibold">Species</th>
+                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-text-muted font-semibold">Shift</th>
+                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-text-muted font-semibold">Abundance</th>
+                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-text-muted font-semibold">Status</th>
+                          <th className="text-left px-4 py-2.5 text-[0.7rem] uppercase tracking-wider text-text-muted font-semibold">Note</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(result as any).species_impact.species.map((sp: any) => {
                           const statusColors: Record<string, string> = {
-                            COLLAPSE_RISK: "text-red-400", HIGH_STRESS: "text-orange-400",
-                            MODERATE_STRESS: "text-yellow-400", STABLE: "text-green-400",
+                            COLLAPSE_RISK: "text-[#c25a44]", HIGH_STRESS: "text-[#d49a2e]",
+                            MODERATE_STRESS: "text-[#d4a520]", STABLE: "text-[#3a8c5f]",
                           };
-                          const statusColor = statusColors[sp.stress_status] ?? "text-white/50";
+                          const statusColor = statusColors[sp.stress_status] ?? "text-text-muted";
                           return (
-                            <tr key={sp.aphia_id} className="border-t border-white/5">
-                              <td className="px-4 py-2.5 text-white/80 font-medium">{sp.species}</td>
-                              <td className="px-4 py-2.5 text-white/60">{sp.poleward_shift_deg > 0 ? "+" : ""}{sp.poleward_shift_deg}°</td>
-                              <td className="px-4 py-2.5 text-white/60">{sp.abundance_change_pct > 0 ? "+" : ""}{sp.abundance_change_pct}%</td>
+                            <tr key={sp.aphia_id} className="border-t border-card-border">
+                              <td className="px-4 py-2.5 text-text font-medium">{sp.species}</td>
+                              <td className="px-4 py-2.5 text-text-muted">{sp.poleward_shift_deg > 0 ? "+" : ""}{sp.poleward_shift_deg}°</td>
+                              <td className="px-4 py-2.5 text-text-muted">{sp.abundance_change_pct > 0 ? "+" : ""}{sp.abundance_change_pct}%</td>
                               <td className={`px-4 py-2.5 font-semibold ${statusColor}`}>{sp.stress_status.replace("_", " ")}</td>
-                              <td className="px-4 py-2.5 text-white/40 text-xs max-w-xs">{sp.note}</td>
+                              <td className="px-4 py-2.5 text-text-faint text-xs max-w-xs">{sp.note}</td>
                             </tr>
                           );
                         })}
@@ -194,7 +193,7 @@ export default function DigitalTwinPage() {
           )}
 
           {!result && !running && (
-            <div className="text-center py-20 text-white/40">
+            <div className="text-center py-20 text-text-faint">
               Configure a scenario and click <b>Run Scenario</b>.
             </div>
           )}

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -29,9 +29,6 @@ function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }
 }
 
 function thinPoints(points: MarkerPoint[], zoomLevel: number): MarkerPoint[] {
-  // At zoom 5 (all-India): show every 4th point
-  // At zoom 6: every 2nd
-  // At zoom 7+: show all
   if (zoomLevel >= 7) return points;
   const step = zoomLevel <= 5 ? 4 : 2;
   return points.filter((_, i) => i % step === 0);
@@ -52,7 +49,7 @@ function AdaptiveMarkers({ points }: { points: MarkerPoint[] }) {
     <>
       {visible.map((p, i) => (
         <CircleMarker
-          key={`${p.lat}-${p.lng}-${p.color}`}
+          key={`${p.lat}-${p.lng}-${p.color}-${i}`}
           center={[p.lat, p.lng]}
           radius={p.radius ?? markerRadius}
           pathOptions={{ color: p.color, fillColor: p.color, fillOpacity: p.fillOpacity ?? 0.65, weight: 1 }}
@@ -65,14 +62,31 @@ function AdaptiveMarkers({ points }: { points: MarkerPoint[] }) {
   );
 }
 
+function InvalidateOnMount() {
+  const map = useMap();
+  useEffect(() => {
+    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 500);
+  }, [map]);
+  return null;
+}
+
 export default function LeafletMap({ center = [15, 78], zoom = 5, height = "480px", points = [] }: Props) {
   return (
-    <div className="rounded-xl overflow-hidden border border-white/8" style={{ height }}>
-      <MapContainer center={center} zoom={zoom} style={{ height: "100%", width: "100%" }} zoomControl={true}>
+    <div className="rounded-xl overflow-hidden border border-[#ece5d6]"
+         style={{ height, background: "#cfe7e6" }}>
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        style={{ height: "100%", width: "100%", background: "#cfe7e6" }}
+        zoomControl={true}
+      >
+        <InvalidateOnMount />
         <MapUpdater center={center} zoom={zoom} />
         <TileLayer
-          attribution='&copy; <a href="https://carto.com">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          maxZoom={19}
         />
         <AdaptiveMarkers points={points} />
       </MapContainer>

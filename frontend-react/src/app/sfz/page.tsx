@@ -56,15 +56,14 @@ export default function SFZPage() {
   return (
     <div className="animate-page-enter">
       <HeroBanner
-        title="🎣 Sustainable Fishing Zones"
+        title="Sustainable Fishing Zones"
         description="<b>XGBoost</b> weekly classifier with <b>SHAP</b> explainability. Green = recommended · Amber = caution · Red = avoid."
-        gradient="from-[#1b5e20] via-[#2e7d32] to-[#388e3c]"
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard label="🟢 GREEN" value={summary.GREEN ?? 0} />
-        <MetricCard label="🟡 AMBER" value={summary.AMBER ?? 0} />
-        <MetricCard label="🔴 RED" value={summary.RED ?? 0} />
+        <MetricCard label="GREEN" value={summary.GREEN ?? 0} />
+        <MetricCard label="AMBER" value={summary.AMBER ?? 0} />
+        <MetricCard label="RED" value={summary.RED ?? 0} />
         <MetricCard label="Total Zones" value={data?.total_zones ?? 0} />
       </div>
 
@@ -81,12 +80,12 @@ export default function SFZPage() {
 
       {/* SHAP chart */}
       {shapData.length > 0 && (
-        <div className="mt-6 bg-gradient-to-br from-[#0e223d]/65 to-[#0a1628]/75 border border-[#4fc3f7]/12 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider mb-3">SHAP Feature Importance</h3>
+        <div className="mt-6 bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">SHAP Feature Importance</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={shapData} layout="vertical">
-              <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
-              <YAxis type="category" dataKey="name" width={130} tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }} />
+              <XAxis type="number" tick={{ fill: "#8a9698", fontSize: 11 }} />
+              <YAxis type="category" dataKey="name" width={130} tick={{ fill: "#6d7e80", fontSize: 12 }} />
               <Tooltip />
               <Bar dataKey="count" fill="#26a69a" radius={[0, 6, 6, 0]} />
             </BarChart>
@@ -95,27 +94,27 @@ export default function SFZPage() {
       )}
 
       {/* Single classify */}
-      <div className="mt-6 bg-gradient-to-br from-[#0e223d]/65 to-[#0a1628]/75 border border-[#4fc3f7]/12 rounded-xl p-6">
-        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider mb-4">Classify a Single Location</h3>
+      <div className="mt-6 bg-white border border-card-border rounded-2xl p-6" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Classify a Single Location</h3>
         <form onSubmit={handleClassify} className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(form).map(([key, val]) => (
             <label key={key} className="block">
-              <span className="text-xs text-white/50">{key.replace(/_/g, " ")}</span>
+              <span className="text-xs text-text-muted">{key.replace(/_/g, " ")}</span>
               <input type="number" step="0.1" value={val}
                 onChange={(e) => setForm({ ...form, [key]: parseFloat(e.target.value) || 0 })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
             </label>
           ))}
           <button type="submit" disabled={classifying}
-            className="col-span-2 md:col-span-4 bg-[#2e7d32] hover:bg-[#1b5e20] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
+            className="col-span-2 md:col-span-4 bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
             {classifying ? "Classifying..." : "Classify Zone"}
           </button>
         </form>
         {result && (
           <div className="mt-4 flex items-center gap-4">
             <ResultBadge label={result.ecological_class} color={sfzColor(result.ecological_class)} size="lg" />
-            <span className="text-white/60">Bycatch Risk: <b className="text-white">{result.bycatch_risk_score.toFixed(3)}</b></span>
-            <span className="text-white/50">Top: {result.shap_top3.map((s) => s.feature).join(", ")}</span>
+            <span className="text-text-muted">Bycatch Risk: <b className="text-text">{result.bycatch_risk_score.toFixed(3)}</b></span>
+            <span className="text-text-faint">Top: {result.shap_top3.map((s) => s.feature).join(", ")}</span>
           </div>
         )}
       </div>

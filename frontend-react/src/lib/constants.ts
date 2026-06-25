@@ -1,15 +1,16 @@
 export const NAV_ITEMS = [
-  { label: "Fisher View", href: "/", icon: "🚤", section: "fisher" },
-  { label: "Dashboard", href: "/dashboard", icon: "📊", section: "expert" },
-  { label: "Marine Health Index", href: "/mhi", icon: "🌡️", section: "expert" },
-  { label: "Fishing Zones", href: "/sfz", icon: "🎣", section: "expert" },
-  { label: "Migration Forecast", href: "/migration", icon: "🐟", section: "expert" },
-  { label: "Biodiversity & CV", href: "/biodiversity", icon: "🔬", section: "expert" },
-  { label: "Digital Twin", href: "/digital-twin", icon: "🌐", section: "expert" },
-  { label: "Ask OceanMind", href: "/rag", icon: "💬", section: "expert" },
-  { label: "Catch Ledger", href: "/blockchain", icon: "⛓️", section: "expert" },
-  { label: "Alerts", href: "/alerts", icon: "🔔", section: "expert" },
-  { label: "Voice", href: "/voice", icon: "🗣️", section: "expert" },
+  { label: "Fisher View", href: "/", icon: "ph ph-sailboat", section: "fisher" },
+  { label: "Fishing Advisory", href: "/fishing-advisory", icon: "ph ph-target", section: "fisher" },
+  { label: "Dashboard", href: "/dashboard", icon: "ph ph-squares-four", section: "expert" },
+  { label: "Marine Health Index", href: "/mhi", icon: "ph ph-heartbeat", section: "expert" },
+  { label: "Fishing Zones", href: "/sfz", icon: "ph ph-map-trifold", section: "expert" },
+  { label: "Migration Forecast", href: "/migration", icon: "ph ph-fish", section: "expert" },
+  { label: "Biodiversity & CV", href: "/biodiversity", icon: "ph ph-microscope", section: "expert" },
+  { label: "Digital Twin", href: "/digital-twin", icon: "ph ph-globe-hemisphere-east", section: "expert" },
+  { label: "Ask OceanMind", href: "/rag", icon: "ph ph-chat-circle-dots", section: "expert" },
+  { label: "Catch Ledger", href: "/blockchain", icon: "ph ph-cube", section: "expert" },
+  { label: "Alerts", href: "/alerts", icon: "ph ph-bell", section: "expert" },
+  { label: "Voice", href: "/voice", icon: "ph ph-microphone", section: "expert" },
 ];
 
 export const SPECIES_OPTIONS: Record<string, number> = {

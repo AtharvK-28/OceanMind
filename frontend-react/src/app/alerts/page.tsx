@@ -39,52 +39,51 @@ export default function AlertsPage() {
   return (
     <div className="animate-page-enter">
       <HeroBanner
-        title="🔔 Alerts & Subscriptions"
+        title="Alerts & Subscriptions"
         description="<b>Phase F:</b> Zone-change SMS (Twilio) + Firebase FCM push. Bhashini voice: <b>Hindi + Tamil</b> (MVP). &lt; 60-second SLA."
-        gradient="from-[#e65100] via-[#f57c00] to-[#ff9800]"
       />
 
       <TabGroup tabs={[
-        { id: "subscribe", label: "📲 Subscribe" },
-        { id: "demo", label: "🚨 Demo Alert" },
+        { id: "subscribe", label: "Subscribe" },
+        { id: "demo", label: "Demo Alert" },
       ]} activeTab={tab} onChange={setTab} />
 
       {tab === "subscribe" && (
         <form onSubmit={handleSubscribe} className="max-w-lg space-y-4">
-          <label className="block"><span className="text-xs text-white/50">Phone (E.164)</span>
+          <label className="block"><span className="text-xs text-text-muted">Phone (E.164)</span>
             <input type="text" value={subForm.phone} onChange={(e) => setSubForm({ ...subForm, phone: e.target.value })}
               placeholder="+919876543210"
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25" /></label>
-          <label className="block"><span className="text-xs text-white/50">FCM Device Token (optional)</span>
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-faint" /></label>
+          <label className="block"><span className="text-xs text-text-muted">FCM Device Token (optional)</span>
             <input type="text" value={subForm.device_token} onChange={(e) => setSubForm({ ...subForm, device_token: e.target.value })}
               placeholder="Firebase token..."
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25" /></label>
-          <label className="block"><span className="text-xs text-white/50">Language</span>
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-faint" /></label>
+          <label className="block"><span className="text-xs text-text-muted">Language</span>
             <select value={subForm.language} onChange={(e) => setSubForm({ ...subForm, language: e.target.value })}
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text">
               <option value="en">English</option><option value="hi">Hindi</option><option value="ta">Tamil</option>
             </select></label>
           <div>
-            <span className="text-xs text-white/50">Alert Types</span>
+            <span className="text-xs text-text-muted">Alert Types</span>
             <div className="flex flex-wrap gap-3 mt-2">
               {alertTypes.map((t) => (
-                <label key={t} className="flex items-center gap-1.5 text-sm text-white/70">
+                <label key={t} className="flex items-center gap-1.5 text-sm text-text-muted">
                   <input type="checkbox" checked={subForm.alert_types.includes(t)}
                     onChange={(e) => setSubForm({ ...subForm, alert_types: e.target.checked ? [...subForm.alert_types, t] : subForm.alert_types.filter((x) => x !== t) })}
-                    className="accent-[#ff9800]" />
+                    className="accent-[#1f7a8c]" />
                   {t}
                 </label>
               ))}
             </div>
           </div>
-          {subError && <p className="text-red-400 text-sm">{subError}</p>}
-          <button type="submit" className="w-full bg-[#f57c00] hover:bg-[#e65100] text-white rounded-lg py-2.5 font-medium transition-colors">
-            📲 Subscribe
+          {subError && <p className="text-[#c25a44] text-sm">{subError}</p>}
+          <button type="submit" className="w-full bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 font-medium transition-colors">
+            Subscribe
           </button>
           {subResult && (
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-green-400 font-medium mb-1">Subscribed!</p>
-              <pre className="text-xs text-white/70">{JSON.stringify(subResult, null, 2)}</pre>
+            <div className="bg-card-hover rounded-lg p-4">
+              <p className="text-[#3a8c5f] font-medium mb-1">Subscribed!</p>
+              <pre className="text-xs text-text-muted">{JSON.stringify(subResult, null, 2)}</pre>
             </div>
           )}
         </form>
@@ -92,19 +91,19 @@ export default function AlertsPage() {
 
       {tab === "demo" && (
         <div className="max-w-lg space-y-4">
-          <p className="text-sm text-white/60">
+          <p className="text-sm text-text-muted">
             Simulates the full event pipeline: INCOIS SST update → SFZ reclassification → alert dispatch → delivery log.
           </p>
-          <button onClick={triggerDemo} className="bg-[#f57c00] hover:bg-[#e65100] text-white rounded-lg px-6 py-2.5 font-medium transition-colors">
-            🚨 Fire Demo Zone-Change Alert
+          <button onClick={triggerDemo} className="bg-accent hover:bg-accent-dark text-white rounded-lg px-6 py-2.5 font-medium transition-colors">
+            Fire Demo Zone-Change Alert
           </button>
           {demoResult && (
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-amber-400 font-medium mb-1">Demo alert triggered!</p>
-              <pre className="text-xs text-white/70">{JSON.stringify(demoResult, null, 2)}</pre>
+            <div className="bg-card-hover rounded-lg p-4">
+              <p className="text-[#d49a2e] font-medium mb-1">Demo alert triggered!</p>
+              <pre className="text-xs text-text-muted">{JSON.stringify(demoResult, null, 2)}</pre>
             </div>
           )}
-          <div className="bg-white/5 rounded-lg p-4 font-mono text-xs text-white/50 whitespace-pre">{`INCOIS SST update  →  SFZ reclassification
+          <div className="bg-card-hover rounded-lg p-4 font-mono text-xs text-text-muted whitespace-pre">{`INCOIS SST update  →  SFZ reclassification
        │
        ▼
 Async event queue

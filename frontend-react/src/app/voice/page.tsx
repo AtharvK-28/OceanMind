@@ -47,16 +47,15 @@ export default function VoicePage() {
   return (
     <div className="animate-page-enter">
       <HeroBanner
-        title="🗣️ Bhashini Voice Interface"
+        title="Bhashini Voice Interface"
         description="<b>Phase F:</b> Ask OceanMind questions in <b>Hindi</b> or <b>Tamil</b> using voice or text. Pipeline: Bhashini ASR (STT) → RAG → Bhashini TTS."
-        gradient="from-[#0d47a1] via-[#1565c0] to-[#1976d2]"
       />
 
       <div className="flex items-center gap-4 mb-6">
         <label className="block">
-          <span className="text-xs text-white/50">Language</span>
+          <span className="text-xs text-text-muted">Language</span>
           <select value={lang} onChange={(e) => changeLang(e.target.value)}
-            className="block mt-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white">
+            className="block mt-1 bg-card-hover border border-card-border rounded-lg px-4 py-2 text-sm text-text">
             {(langData?.languages ?? []).map((l) => (
               <option key={l.code} value={l.code}>{l.native} ({l.name})</option>
             ))}
@@ -68,31 +67,31 @@ export default function VoicePage() {
       </div>
 
       <TabGroup tabs={[
-        { id: "text", label: "⌨️ Text Query" },
-        { id: "voice", label: "🎤 Voice Query" },
+        { id: "text", label: "Text Query" },
+        { id: "voice", label: "Voice Query" },
       ]} activeTab={tab} onChange={setTab} />
 
       {tab === "text" && (
         <div className="space-y-4 max-w-2xl">
           <textarea value={query} onChange={(e) => setQuery(e.target.value)} rows={3}
             placeholder="Type in your selected language..."
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-[#4fc3f7]/50" />
+            className="w-full bg-card-hover border border-card-border rounded-lg px-4 py-3 text-sm text-text placeholder:text-text-faint resize-none focus:outline-none focus:border-accent/50" />
           <button onClick={handleTextQuery} disabled={!query.trim() || loading}
-            className="bg-[#1976d2] hover:bg-[#1565c0] text-white rounded-lg px-6 py-2.5 font-medium transition-colors disabled:opacity-40">
-            {loading ? "Processing..." : "🔍 Ask OceanMind"}
+            className="bg-accent hover:bg-accent-dark text-white rounded-lg px-6 py-2.5 font-medium transition-colors disabled:opacity-40">
+            {loading ? "Processing..." : "Ask OceanMind"}
           </button>
         </div>
       )}
 
       {tab === "voice" && (
         <div className="space-y-4 max-w-2xl">
-          <p className="text-sm text-white/60">
+          <p className="text-sm text-text-muted">
             <b>Production:</b> Record audio → Bhashini ASR transcription → RAG answer → Bhashini TTS playback.<br />
             <b>MVP:</b> Click below to simulate a voice query in {langLabel}.
           </p>
           <button onClick={handleVoiceSim} disabled={loading}
-            className="w-full bg-[#1976d2] hover:bg-[#1565c0] text-white rounded-lg py-3 font-semibold transition-colors disabled:opacity-50">
-            {loading ? "Simulating pipeline..." : "🎤 Simulate Voice Query"}
+            className="w-full bg-accent hover:bg-accent-dark text-white rounded-lg py-3 font-semibold transition-colors disabled:opacity-50">
+            {loading ? "Simulating pipeline..." : "Simulate Voice Query"}
           </button>
         </div>
       )}
@@ -102,16 +101,16 @@ export default function VoicePage() {
       {result && !loading && (
         <div className="mt-6 space-y-6 max-w-2xl">
           {result.query.stt_source !== "text_input" && (
-            <p className="text-sm text-white/70">🎤 Transcribed ({langLabel}): <b className="text-white">{result.query.original_text}</b></p>
+            <p className="text-sm text-text-muted"><i className="ph ph-microphone mr-1" />Transcribed ({langLabel}): <b className="text-text">{result.query.original_text}</b></p>
           )}
 
-          <div className="bg-gradient-to-br from-[#0e223d]/65 to-[#0a1628]/75 border border-[#4fc3f7]/12 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider mb-2">Answer</h3>
-            <p className="text-white/85 leading-relaxed">{result.answer.localized}</p>
+          <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+            <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-2">Answer</h3>
+            <p className="text-text leading-relaxed">{result.answer.localized}</p>
             {lang !== "en" && (
               <details className="mt-3">
-                <summary className="text-xs text-white/40 cursor-pointer hover:text-white/60">English translation</summary>
-                <p className="mt-2 text-sm text-white/60">{result.answer.english}</p>
+                <summary className="text-xs text-text-faint cursor-pointer hover:text-text-muted">English translation</summary>
+                <p className="mt-2 text-sm text-text-muted">{result.answer.english}</p>
               </details>
             )}
           </div>
@@ -125,7 +124,7 @@ export default function VoicePage() {
 
           {result.provenance.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider mb-3">Provenance</h3>
+              <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Provenance</h3>
               <DataTable columns={[
                 { key: "source_id", label: "Source" }, { key: "source_system", label: "System" },
                 { key: "quality_flag", label: "Quality" }, { key: "relevance_score", label: "Relevance" },

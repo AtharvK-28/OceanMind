@@ -70,9 +70,8 @@ export default function BlockchainPage() {
   return (
     <div className="animate-page-enter">
       <HeroBanner
-        title="⛓️ Catch Traceability Ledger"
+        title="Catch Traceability Ledger"
         description="<b>Phase H MVP:</b> in-memory SHA-256 hash chain (mock ledger). Phase 2: replaces with <b>Hyperledger Fabric 2.5</b>."
-        gradient="from-[#263238] via-[#37474f] to-[#455a64]"
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -83,48 +82,48 @@ export default function BlockchainPage() {
       </div>
 
       <TabGroup tabs={[
-        { id: "log", label: "📝 Log Catch" },
-        { id: "verify", label: "🔍 Verify TX" },
-        { id: "history", label: "📜 History" },
+        { id: "log", label: "Log Catch" },
+        { id: "verify", label: "Verify TX" },
+        { id: "history", label: "History" },
       ]} activeTab={tab} onChange={setTab} />
 
       {tab === "log" && (
         <form onSubmit={handleLog} className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
           <label className="block">
-            <span className="text-xs text-white/50">Species</span>
+            <span className="text-xs text-text-muted">Species</span>
             <select value={catchForm.species} onChange={(e) => setCatchForm({ ...catchForm, species: e.target.value })}
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text">
               {Object.keys(SPECIES_OPTIONS).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-white/50">Quantity (kg)</span>
+            <span className="text-xs text-text-muted">Quantity (kg)</span>
             <input type="number" value={catchForm.quantity_kg} onChange={(e) => setCatchForm({ ...catchForm, quantity_kg: +e.target.value })}
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
           </label>
           <label className="block">
-            <span className="text-xs text-white/50">Landing Site</span>
+            <span className="text-xs text-text-muted">Landing Site</span>
             <select value={catchForm.site} onChange={(e) => setCatchForm({ ...catchForm, site: e.target.value })}
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text">
               {Object.keys(LANDING_SITES).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-white/50">Fisher Token (optional)</span>
+            <span className="text-xs text-text-muted">Fisher Token (optional)</span>
             <input type="text" value={catchForm.fisher_token} onChange={(e) => setCatchForm({ ...catchForm, fisher_token: e.target.value })}
               placeholder="e.g. FISHER_GJ_8821"
-              className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25" />
+              className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-faint" />
           </label>
           <button type="submit" disabled={logging}
-            className="col-span-1 md:col-span-2 bg-[#455a64] hover:bg-[#37474f] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
-            {logging ? "Logging..." : "📝 Log Catch to Ledger"}
+            className="col-span-1 md:col-span-2 bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
+            {logging ? "Logging..." : "Log Catch to Ledger"}
           </button>
         </form>
       )}
       {tab === "log" && catchResult && (
-        <div className="mt-4 bg-white/5 rounded-lg p-4 max-w-2xl">
-          <p className="text-green-400 font-medium mb-2">Catch logged successfully!</p>
-          <pre className="text-xs text-white/70 overflow-x-auto">{JSON.stringify(catchResult, null, 2)}</pre>
+        <div className="mt-4 bg-card-hover rounded-lg p-4 max-w-2xl">
+          <p className="text-[#3a8c5f] font-medium mb-2">Catch logged successfully!</p>
+          <pre className="text-xs text-text-muted overflow-x-auto">{JSON.stringify(catchResult, null, 2)}</pre>
         </div>
       )}
 
@@ -133,17 +132,17 @@ export default function BlockchainPage() {
           <div className="flex gap-3">
             <input type="text" value={txId} onChange={(e) => setTxId(e.target.value)}
               placeholder="Enter 64-character SHA-256 transaction ID..."
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-white/25 font-mono" />
+              className="flex-1 bg-card-hover border border-card-border rounded-lg px-4 py-2.5 text-sm text-text placeholder:text-text-faint font-mono" />
             <button onClick={handleVerify} disabled={!txId.trim()}
-              className="px-6 bg-[#455a64] hover:bg-[#37474f] text-white rounded-lg font-medium transition-colors disabled:opacity-40">
+              className="px-6 bg-accent hover:bg-accent-dark text-white rounded-lg font-medium transition-colors disabled:opacity-40">
               Verify
             </button>
           </div>
           {verifyError && <p className="text-red-400 text-sm">{verifyError}</p>}
           {verifyResult && (
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-green-400 font-medium mb-2">Transaction verified!</p>
-              <pre className="text-xs text-white/70 overflow-x-auto">{JSON.stringify(verifyResult, null, 2)}</pre>
+            <div className="bg-card-hover rounded-lg p-4">
+              <p className="text-[#3a8c5f] font-medium mb-2">Transaction verified!</p>
+              <pre className="text-xs text-text-muted overflow-x-auto">{JSON.stringify(verifyResult, null, 2)}</pre>
             </div>
           )}
         </div>
@@ -154,8 +153,8 @@ export default function BlockchainPage() {
           <div className="flex gap-3 max-w-md">
             <input type="text" value={historyFilter} onChange={(e) => setHistoryFilter(e.target.value)}
               placeholder="Filter by landing site (e.g. VERAVAL_GJ)"
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-white/25" />
-            <button onClick={loadHistory} className="px-6 bg-[#455a64] hover:bg-[#37474f] text-white rounded-lg font-medium transition-colors">
+              className="flex-1 bg-card-hover border border-card-border rounded-lg px-4 py-2.5 text-sm text-text placeholder:text-text-faint" />
+            <button onClick={loadHistory} className="px-6 bg-accent hover:bg-accent-dark text-white rounded-lg font-medium transition-colors">
               Load
             </button>
           </div>

@@ -19,62 +19,63 @@ export default function Sidebar() {
     <>
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center gap-3 px-4 py-3
-                      bg-[#06101f]/95 backdrop-blur-md border-b border-white/5">
-        <button onClick={() => setOpen(!open)} className="text-white/80 hover:text-white p-1">
+                      bg-[#16434c]/95 backdrop-blur-md border-b border-white/5">
+        <button onClick={() => setOpen(!open)} className="text-[#cfe6e2] hover:text-white p-1">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             {open
               ? <path d="M6 6l12 12M6 18L18 6" />
               : <><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></>}
           </svg>
         </button>
-        <span className="text-lg">🌊</span>
-        <span className="text-sm font-semibold text-[#e0f7fa]">{currentPage?.label ?? "OceanMind"}</span>
+        <i className="ph ph-wave-sine text-xl text-[#9fe0d6]" />
+        <span className="text-sm font-semibold text-[#f3f8f6]">{currentPage?.label ?? "OceanMind"}</span>
       </div>
 
       {/* Overlay */}
       {open && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:sticky top-0 left-0 z-40 h-screen w-64 flex flex-col
-        bg-gradient-to-b from-[#06101f] via-[#0b1a2e] to-[#0e223d] border-r border-white/5
+        fixed lg:sticky top-0 left-0 z-40 h-screen w-[250px] flex flex-col
+        border-r border-white/5
         transition-transform duration-300 ease-out
         ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
-      `}>
+      `} style={{ background: "linear-gradient(177deg, #16434c 0%, #10333b 60%, #0e2d34 100%)" }}>
         {/* Brand */}
-        <div className="text-center py-6 px-4">
-          <div className="text-4xl leading-none">🌊</div>
-          <div className="text-xl font-bold mt-1.5 text-[#e0f7fa] tracking-tight">OceanMind</div>
-          <div className="text-[0.72rem] text-white/45 mt-0.5">AI Marine Intelligence &middot; Biothon 2026</div>
+        <div className="px-[22px] pt-6 pb-[18px]">
+          <div className="flex items-center gap-[11px]">
+            <div className="w-[38px] h-[38px] rounded-[11px] bg-white/10 border border-white/[0.14] flex items-center justify-center text-[#9fe0d6]">
+              <i className="ph ph-wave-sine text-[21px]" />
+            </div>
+            <div>
+              <div className="text-[21px] font-semibold leading-none text-[#f3f8f6] tracking-tight" style={{ fontFamily: "'Newsreader', serif" }}>OceanMind</div>
+              <div className="text-[9.5px] tracking-[0.13em] uppercase text-[rgba(220,235,233,0.45)] mt-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Marine Intelligence</div>
+            </div>
+          </div>
         </div>
 
-        <div className="border-t border-white/6 mx-4" />
+        <div className="h-px bg-white/[0.08] mx-[18px] mb-[14px]" />
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-3 overflow-y-auto" onClick={() => setOpen(false)}>
-          {/* Fisher section */}
-          <div className="space-y-0.5 mb-3">
+        <nav className="flex-1 px-[14px] py-0 overflow-y-auto" onClick={() => setOpen(false)}>
+          <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] py-1 pb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>On the water</div>
+          <div className="space-y-[3px] mb-3">
             {fisherItems.map((item) => (
               <NavLink key={item.href} {...item} />
             ))}
           </div>
 
-          <div className="px-3 py-2">
-            <div className="text-[0.6rem] uppercase tracking-widest text-white/25 font-semibold">Expert Dashboard</div>
-          </div>
-
-          <div className="space-y-0.5">
+          <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] pt-4 pb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Research console</div>
+          <div className="space-y-[2px]">
             {expertItems.map((item) => (
               <NavLink key={item.href} {...item} />
             ))}
           </div>
         </nav>
 
-        <div className="border-t border-white/6 mx-4" />
-
-        {/* System status */}
+        <div className="border-t border-white/[0.06] mx-4" />
         <div className="py-3">
           <SystemStatus />
         </div>

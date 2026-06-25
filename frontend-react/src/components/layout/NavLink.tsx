@@ -9,13 +9,14 @@ export default function NavLink({ href, icon, label }: { href: string; icon: str
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-150
+      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] transition-all duration-150
         ${active
-          ? "bg-gradient-to-r from-[#064273]/60 to-[#1a8a5c]/40 text-white font-semibold border-l-[3px] border-[#4fc3f7]"
-          : "text-white/65 hover:bg-[#4fc3f7]/10 hover:text-white border-l-[3px] border-transparent"
+          ? "bg-[rgba(143,211,200,0.16)] text-[#f3f8f6] font-semibold shadow-[inset_2px_0_0_#6fc7b8]"
+          : "text-[#cfe6e2] hover:bg-[rgba(255,255,255,0.06)] border-l-0"
         }`}
     >
-      <span className="text-base w-6 text-center">{icon}</span>
+      <i className={`${active ? icon.replace("ph ph-", "ph-fill ph-") : icon} text-lg w-5 text-center`}
+         style={{ color: active ? "#9fe0d6" : "#8fd3c8" }} />
       <span>{label}</span>
     </Link>
   );

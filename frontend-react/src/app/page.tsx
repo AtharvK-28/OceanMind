@@ -124,16 +124,16 @@ export default function FisherView() {
       {/* Port selector */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-white">Fishing Advisory</h1>
-          <p className="text-sm text-white/40">Zones near your landing site</p>
+          <h1 className="text-xl font-bold text-text" style={{ fontFamily: "'Newsreader', serif" }}>Fishing Advisory</h1>
+          <p className="text-sm text-text-faint">Zones near your landing site</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-white/30 hidden sm:block">Your port</span>
+          <span className="text-xs text-text-faint hidden sm:block">Your port</span>
           <select
             value={port}
             onChange={(e) => selectPort(e.target.value)}
-            className="bg-white/5 border border-white/15 rounded-lg px-4 py-2 text-sm text-white
-                       focus:outline-none focus:border-[#4fc3f7]/50 min-w-[200px]"
+            className="bg-card-hover border border-card-border rounded-lg px-4 py-2 text-sm text-text
+                       focus:outline-none focus:border-accent/50 min-w-[200px]"
           >
             {Object.keys(PORTS).map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
@@ -142,48 +142,48 @@ export default function FisherView() {
 
       {/* Advisory */}
       {nearbyAlerts > 0 || isMonsoon ? (
-        <div className="bg-gradient-to-r from-amber-900/60 to-amber-950/60 border border-amber-500/25 rounded-xl p-4 mb-4">
+        <div className="bg-[#d49a2e]/10 border border-[#d49a2e]/25 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-sm font-semibold text-amber-200">
+            <div className="w-2 h-2 rounded-full bg-[#d49a2e] animate-pulse" />
+            <span className="text-sm font-semibold text-[#d49a2e]">
               {isMonsoon ? "Monsoon season — check local fishing ban before heading out"
                 : `${nearbyAlerts} marine stress alerts near ${port.split(",")[0]}`}
             </span>
           </div>
         </div>
       ) : nearbyGreen > 0 ? (
-        <div className="bg-gradient-to-r from-green-900/60 to-green-950/60 border border-green-500/25 rounded-xl p-4 mb-4">
+        <div className="bg-[#3a8c5f]/10 border border-[#3a8c5f]/25 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-400" />
-            <span className="text-sm font-semibold text-green-200">
+            <div className="w-2 h-2 rounded-full bg-[#3a8c5f]" />
+            <span className="text-sm font-semibold text-[#3a8c5f]">
               {nearbyGreen} safe zones near {port.split(",")[0]} — good conditions for fishing
             </span>
-            <span className="ml-auto text-xs text-white/30">{timeStr}</span>
+            <span className="ml-auto text-xs text-text-faint">{timeStr}</span>
           </div>
         </div>
       ) : null}
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3 mb-5">
-        <div className="bg-green-950/40 border border-green-500/15 rounded-xl p-3.5 text-center
-                        transition-all hover:border-green-400/30">
-          <div className="text-2xl font-bold text-green-400">{nearbyGreen}</div>
-          <div className="text-[0.65rem] text-green-300/50 mt-0.5 uppercase tracking-wider">Safe</div>
+        <div className="bg-[#3a8c5f]/8 border border-[#3a8c5f]/15 rounded-xl p-3.5 text-center
+                        transition-all hover:border-[#3a8c5f]/30">
+          <div className="text-2xl font-bold text-[#3a8c5f]">{nearbyGreen}</div>
+          <div className="text-[0.65rem] text-[#3a8c5f]/60 mt-0.5 uppercase tracking-wider">Safe</div>
         </div>
-        <div className="bg-amber-950/40 border border-amber-500/15 rounded-xl p-3.5 text-center
-                        transition-all hover:border-amber-400/30">
-          <div className="text-2xl font-bold text-amber-400">{nearbyAmber}</div>
-          <div className="text-[0.65rem] text-amber-300/50 mt-0.5 uppercase tracking-wider">Caution</div>
+        <div className="bg-[#d49a2e]/8 border border-[#d49a2e]/15 rounded-xl p-3.5 text-center
+                        transition-all hover:border-[#d49a2e]/30">
+          <div className="text-2xl font-bold text-[#d49a2e]">{nearbyAmber}</div>
+          <div className="text-[0.65rem] text-[#d49a2e]/60 mt-0.5 uppercase tracking-wider">Caution</div>
         </div>
-        <div className="bg-red-950/40 border border-red-500/15 rounded-xl p-3.5 text-center
-                        transition-all hover:border-red-400/30">
-          <div className="text-2xl font-bold text-red-400">{nearbyRed}</div>
-          <div className="text-[0.65rem] text-red-300/50 mt-0.5 uppercase tracking-wider">Avoid</div>
+        <div className="bg-[#c25a44]/8 border border-[#c25a44]/15 rounded-xl p-3.5 text-center
+                        transition-all hover:border-[#c25a44]/30">
+          <div className="text-2xl font-bold text-[#c25a44]">{nearbyRed}</div>
+          <div className="text-[0.65rem] text-[#c25a44]/60 mt-0.5 uppercase tracking-wider">Avoid</div>
         </div>
-        <div className="bg-[#0e223d]/50 border border-white/8 rounded-xl p-3.5 text-center
-                        transition-all hover:border-white/15">
-          <div className="text-2xl font-bold text-white">{localSST}<span className="text-sm text-white/40">°C</span></div>
-          <div className="text-[0.65rem] text-white/35 mt-0.5 uppercase tracking-wider">Sea temp</div>
+        <div className="bg-card-hover border border-card-border rounded-xl p-3.5 text-center
+                        transition-all hover:border-accent/15">
+          <div className="text-2xl font-bold text-text">{localSST}<span className="text-sm text-text-faint">°C</span></div>
+          <div className="text-[0.65rem] text-text-faint mt-0.5 uppercase tracking-wider">Sea temp</div>
         </div>
       </div>
 
@@ -207,49 +207,49 @@ export default function FisherView() {
 
         <div className="space-y-3">
           {/* Local conditions */}
-          <div className="bg-[#0e223d]/50 border border-white/8 rounded-xl p-4">
-            <h3 className="text-[0.65rem] uppercase tracking-wider text-white/35 font-semibold mb-3">
+          <div className="bg-white border border-card-border rounded-2xl p-4">
+            <h3 className="text-[0.65rem] uppercase tracking-wider text-text-faint font-semibold mb-3">
               Conditions near {port.split(",")[0]}
             </h3>
             <div className="space-y-2.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-white/50">Coast</span>
-                <span className="text-white/80">{portInfo.coast}</span>
+                <span className="text-text-muted">Coast</span>
+                <span className="text-text">{portInfo.coast}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Sea temp</span>
-                <span className="text-white/80">{localSST}°C</span>
+                <span className="text-text-muted">Sea temp</span>
+                <span className="text-text">{localSST}°C</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Alerts nearby</span>
-                <span className={nearbyAlerts === 0 ? "text-green-400" : "text-amber-400"}>
+                <span className="text-text-muted">Alerts nearby</span>
+                <span className={nearbyAlerts === 0 ? "text-[#3a8c5f]" : "text-[#d49a2e]"}>
                   {nearbyAlerts === 0 ? "None" : nearbyAlerts}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Season</span>
-                <span className="text-white/80">{isMonsoon ? "Monsoon" : "Open season"}</span>
+                <span className="text-text-muted">Season</span>
+                <span className="text-text">{isMonsoon ? "Monsoon" : "Open season"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Zones in range</span>
-                <span className="text-white/80">{nearbyFeatures.length}</span>
+                <span className="text-text-muted">Zones in range</span>
+                <span className="text-text">{nearbyFeatures.length}</span>
               </div>
             </div>
           </div>
 
           {/* Recent catches at this port */}
-          <div className="bg-[#0e223d]/50 border border-white/8 rounded-xl p-4">
-            <h3 className="text-[0.65rem] uppercase tracking-wider text-white/35 font-semibold mb-3">
+          <div className="bg-white border border-card-border rounded-2xl p-4">
+            <h3 className="text-[0.65rem] uppercase tracking-wider text-text-faint font-semibold mb-3">
               Recent catches — {port.split(",")[0]}
             </h3>
             {localHistory.length === 0 ? (
-              <p className="text-xs text-white/25 py-2">No catches logged at this site yet.</p>
+              <p className="text-xs text-text-faint py-2">No catches logged at this site yet.</p>
             ) : (
               <div className="space-y-2">
                 {localHistory.slice(0, 5).map((r) => (
                   <div key={r.transaction_id} className="flex justify-between items-center text-sm">
-                    <span className="text-white/70">{r.species_name}</span>
-                    <span className="text-white/40 text-xs">{r.quantity_kg} kg</span>
+                    <span className="text-text-muted">{r.species_name}</span>
+                    <span className="text-text-faint text-xs">{r.quantity_kg} kg</span>
                   </div>
                 ))}
               </div>
@@ -257,16 +257,16 @@ export default function FisherView() {
           </div>
 
           {/* Quick nav */}
-          <div className="bg-[#0e223d]/50 border border-white/8 rounded-xl p-4">
-            <h3 className="text-[0.65rem] uppercase tracking-wider text-white/35 font-semibold mb-3">More info</h3>
+          <div className="bg-white border border-card-border rounded-2xl p-4">
+            <h3 className="text-[0.65rem] uppercase tracking-wider text-text-faint font-semibold mb-3">More info</h3>
             <div className="space-y-2">
-              <a href="/migration" className="block text-sm text-white/50 hover:text-[#4fc3f7] transition-colors">
+              <a href="/migration" className="block text-sm text-text-muted hover:text-accent transition-colors">
                 Where are fish moving this week?
               </a>
-              <a href="/biodiversity" className="block text-sm text-white/50 hover:text-[#4fc3f7] transition-colors">
+              <a href="/biodiversity" className="block text-sm text-text-muted hover:text-accent transition-colors">
                 What species are near {port.split(",")[0]}?
               </a>
-              <a href="/digital-twin" className="block text-sm text-white/50 hover:text-[#4fc3f7] transition-colors">
+              <a href="/digital-twin" className="block text-sm text-text-muted hover:text-accent transition-colors">
                 What if the sea warms +2°C?
               </a>
             </div>
@@ -277,54 +277,54 @@ export default function FisherView() {
       {/* Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <button onClick={() => setShowCatch(!showCatch)}
-          className="flex items-center justify-center gap-2 bg-green-700/80 hover:bg-green-600
-                     text-white rounded-xl py-3 text-sm font-semibold border border-green-500/20
+          className="flex items-center justify-center gap-2 bg-accent hover:bg-accent-dark
+                     text-white rounded-xl py-3 text-sm font-semibold border border-accent/20
                      transition-all hover:-translate-y-0.5">
           Log catch
         </button>
         <a href="/biodiversity"
-          className="flex items-center justify-center gap-2 bg-[#e64a19]/80 hover:bg-[#d84315]
-                     text-white rounded-xl py-3 text-sm font-semibold border border-orange-500/20
-                     transition-all hover:-translate-y-0.5">
+          className="flex items-center justify-center gap-2 bg-white border border-[#d8cfbc]
+                     text-[#2a6f7c] rounded-xl py-3 text-sm font-semibold
+                     transition-all hover:-translate-y-0.5 hover:border-accent/30">
           Scan catch photo
         </a>
         <a href="/voice"
-          className="flex items-center justify-center gap-2 bg-blue-700/80 hover:bg-blue-600
-                     text-white rounded-xl py-3 text-sm font-semibold border border-blue-500/20
-                     transition-all hover:-translate-y-0.5">
+          className="flex items-center justify-center gap-2 bg-white border border-[#d8cfbc]
+                     text-[#2a6f7c] rounded-xl py-3 text-sm font-semibold
+                     transition-all hover:-translate-y-0.5 hover:border-accent/30">
           Ask in Hindi / Tamil
         </a>
         <a href="/alerts"
-          className="flex items-center justify-center gap-2 bg-orange-700/80 hover:bg-orange-600
-                     text-white rounded-xl py-3 text-sm font-semibold border border-orange-500/20
-                     transition-all hover:-translate-y-0.5">
+          className="flex items-center justify-center gap-2 bg-white border border-[#d8cfbc]
+                     text-[#2a6f7c] rounded-xl py-3 text-sm font-semibold
+                     transition-all hover:-translate-y-0.5 hover:border-accent/30">
           Get SMS alerts
         </a>
       </div>
 
       {/* Catch form */}
       {showCatch && (
-        <div className="mb-4 animate-data-enter bg-[#0e223d]/50 border border-green-500/15 rounded-xl p-5">
+        <div className="mb-4 animate-data-enter bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white">Log catch at {port.split(",")[0]}</h3>
-            <button onClick={() => setShowCatch(false)} className="text-white/30 hover:text-white/60 text-lg">&times;</button>
+            <h3 className="text-sm font-semibold text-text">Log catch at {port.split(",")[0]}</h3>
+            <button onClick={() => setShowCatch(false)} className="text-text-faint hover:text-text-muted text-lg">&times;</button>
           </div>
           <form onSubmit={logCatch} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
             <label className="block">
-              <span className="text-xs text-white/40">Species</span>
+              <span className="text-xs text-text-muted">Species</span>
               <select value={catchForm.species} onChange={(e) => setCatchForm({ ...catchForm, species: e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white">
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2.5 text-sm text-text">
                 {Object.keys(SPECIES_OPTIONS).map((s) => <option key={s} value={s}>{s.split(" (")[0]}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-white/40">Quantity (kg)</span>
+              <span className="text-xs text-text-muted">Quantity (kg)</span>
               <input type="number" value={catchForm.quantity_kg}
                 onChange={(e) => setCatchForm({ ...catchForm, quantity_kg: +e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white" />
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2.5 text-sm text-text" />
             </label>
             <button type="submit" disabled={logging}
-              className="bg-green-600 hover:bg-green-700 text-white rounded-lg py-2.5 text-sm font-semibold
+              className="bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 text-sm font-semibold
                          transition-colors disabled:opacity-50">
               {logging ? "Logging..." : "Record catch"}
             </button>
@@ -332,7 +332,7 @@ export default function FisherView() {
         </div>
       )}
 
-      <div className="text-center text-[0.6rem] text-white/15 pb-2">
+      <div className="text-center text-[0.6rem] text-text-faint pb-2">
         INCOIS + GFW data · Updated weekly · {portInfo.coast} coverage · OceanMind AI
       </div>
     </div>

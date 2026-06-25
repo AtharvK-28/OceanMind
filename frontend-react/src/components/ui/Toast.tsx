@@ -29,9 +29,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const colors = {
-    success: "from-green-600/90 to-green-700/90 border-green-400/30",
-    error: "from-red-600/90 to-red-700/90 border-red-400/30",
-    info: "from-[#0288d1]/90 to-[#0277bd]/90 border-[#4fc3f7]/30",
+    success: "bg-[#eaf3ef] border-[#cfe6dd] text-[#2f6f4c]",
+    error: "bg-[#f6e6e1] border-[#e8cabf] text-[#9d3c29]",
+    info: "bg-white border-[#ece5d6] text-[#16323a]",
   };
 
   const icons = { success: "✓", error: "✕", info: "ℹ" };
@@ -43,9 +43,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto bg-gradient-to-r ${colors[t.type]}
-                        border rounded-xl px-5 py-3 shadow-2xl shadow-black/40
-                        backdrop-blur-md text-white text-sm font-medium
+            className={`pointer-events-auto ${colors[t.type]}
+                        border rounded-xl px-5 py-3 shadow-lg
+                        backdrop-blur-md text-sm font-medium
                         animate-[fadeSlideIn_0.3s_ease-out]
                         flex items-center gap-2.5 max-w-sm`}
           >

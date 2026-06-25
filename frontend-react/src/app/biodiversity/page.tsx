@@ -11,9 +11,9 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import type { CVAnalyzeResponse, EDNAAnalyzeResponse, SpeciesReferenceResponse } from "@/types/api";
 
 const PIE_COLORS = [
-  "#4fc3f7", "#66bb6a", "#ffa726", "#ef5350", "#ab47bc", "#26c6da", "#ec407a", "#8d6e63",
-  "#7e57c2", "#29b6f6", "#9ccc65", "#ffca28", "#ff7043", "#78909c", "#5c6bc0", "#26a69a",
-  "#d4e157", "#42a5f5", "#bdbdbd",
+  "#1f7a8c", "#3a8c5f", "#d49a2e", "#c25a44", "#ab47bc", "#26a69a", "#ec407a", "#8d6e63",
+  "#7e57c2", "#2a6f7c", "#6d8c3e", "#d4a520", "#ff7043", "#6d7e80", "#5c6bc0", "#3a8c5f",
+  "#b8a44e", "#1f7a8c", "#8a9698",
 ];
 
 export default function BiodiversityPage() {
@@ -66,23 +66,22 @@ export default function BiodiversityPage() {
   return (
     <div className="animate-page-enter">
       <HeroBanner
-        title="🔬 Biodiversity & Computer Vision"
+        title="Biodiversity & Computer Vision"
         description="<b>Phase B:</b> YOLOv8 landing-site fish detection + ResNet50 species classifier (13 Indian species). eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution."
-        gradient="from-[#bf360c] via-[#d84315] to-[#e64a19]"
       />
 
       <TabGroup tabs={[
-        { id: "cv", label: "📸 CV Fish Analysis" },
-        { id: "edna", label: "🧬 eDNA Analysis" },
-        { id: "ref", label: "📋 Species Reference" },
+        { id: "cv", label: "CV Fish Analysis" },
+        { id: "edna", label: "eDNA Analysis" },
+        { id: "ref", label: "Species Reference" },
       ]} activeTab={tab} onChange={setTab} />
 
       {tab === "cv" && (
         <div className="space-y-6">
           <form onSubmit={runCV} className="max-w-2xl space-y-4">
             {/* Image upload — primary input */}
-            <div className="border-2 border-dashed border-white/15 rounded-xl p-6 text-center
-                            hover:border-[#e64a19]/40 transition-colors relative">
+            <div className="border-2 border-dashed border-[#d8cfbc] rounded-xl p-6 text-center
+                            hover:border-accent/40 transition-colors relative">
               {cvPreview ? (
                 <div className="relative inline-block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -94,9 +93,9 @@ export default function BiodiversityPage() {
                 </div>
               ) : (
                 <div>
-                  <div className="text-3xl mb-2">📸</div>
-                  <p className="text-sm text-white/50 mb-1">Drop a catch photo or tap to take one</p>
-                  <p className="text-xs text-white/30">JPG, PNG — the model will detect fish species</p>
+                  <div className="text-3xl mb-2"><i className="ph ph-camera text-text-muted" /></div>
+                  <p className="text-sm text-text-muted mb-1">Drop a catch photo or tap to take one</p>
+                  <p className="text-xs text-text-faint">JPG, PNG — the model will detect fish species</p>
                 </div>
               )}
               <input type="file" accept="image/*" capture="environment" onChange={handleImageUpload}
@@ -106,38 +105,38 @@ export default function BiodiversityPage() {
             {/* Location fields */}
             <div className="grid grid-cols-3 gap-4">
               <label className="block">
-                <span className="text-xs text-white/50">Latitude</span>
+                <span className="text-xs text-text-muted">Latitude</span>
                 <input type="number" step="0.1" value={cvForm.site_lat} onChange={(e) => setCvForm({ ...cvForm, site_lat: +e.target.value })}
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                  className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
               </label>
               <label className="block">
-                <span className="text-xs text-white/50">Longitude</span>
+                <span className="text-xs text-text-muted">Longitude</span>
                 <input type="number" step="0.1" value={cvForm.site_lon} onChange={(e) => setCvForm({ ...cvForm, site_lon: +e.target.value })}
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                  className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
               </label>
               <label className="block">
-                <span className="text-xs text-white/50">Site Name</span>
+                <span className="text-xs text-text-muted">Site Name</span>
                 <input type="text" value={cvForm.site_name} onChange={(e) => setCvForm({ ...cvForm, site_name: e.target.value })}
                   placeholder="e.g. Vizhinjam"
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25" />
+                  className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-faint" />
               </label>
             </div>
 
             <button type="submit" disabled={cvLoading}
-              className="w-full bg-[#e64a19] hover:bg-[#d84315] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
+              className="w-full bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
               {cvLoading ? "Running detection..." : cvImage ? "Detect fish species" : "Run with synthetic data"}
             </button>
-            {cvImage && <p className="text-xs text-green-400/60 text-center">YOLOv8 detection + ResNet50 species classifier will run on your photo</p>}
+            {cvImage && <p className="text-xs text-[#3a8c5f]/70 text-center">YOLOv8 detection + ResNet50 species classifier will run on your photo</p>}
           </form>
           {cvLoading && <LoadingSpinner text="Running CV pipeline..." />}
           {cvResult && !cvLoading && (
             <>
-              <p className="text-green-400 font-medium">Detected <b>{cvResult.total_fish_detected}</b> fish across <b>{Object.keys(cvResult.species_summary).length}</b> species
-                <span className="text-white/40 text-xs ml-2">({cvResult.model})</span>
+              <p className="text-[#3a8c5f] font-medium">Detected <b>{cvResult.total_fish_detected}</b> fish across <b>{Object.keys(cvResult.species_summary).length}</b> species
+                <span className="text-text-faint text-xs ml-2">({cvResult.model})</span>
               </p>
               {cvBarData.length > 0 && (
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={cvBarData}><XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 11 }} /><YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} /><Tooltip /><Bar dataKey="count" fill="#e64a19" radius={[6, 6, 0, 0]} /></BarChart>
+                  <BarChart data={cvBarData}><XAxis dataKey="name" tick={{ fill: "#6d7e80", fontSize: 11 }} /><YAxis tick={{ fill: "#8a9698", fontSize: 11 }} /><Tooltip /><Bar dataKey="count" fill="#1f7a8c" radius={[6, 6, 0, 0]} /></BarChart>
                 </ResponsiveContainer>
               )}
               <DataTable columns={[
@@ -154,21 +153,21 @@ export default function BiodiversityPage() {
       {tab === "edna" && (
         <div className="space-y-6">
           <form onSubmit={runEdna} className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
-            <label className="block"><span className="text-xs text-white/50">Sample ID</span>
+            <label className="block"><span className="text-xs text-text-muted">Sample ID</span>
               <input type="text" value={ednaForm.sample_id} onChange={(e) => setEdnaForm({ ...ednaForm, sample_id: e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" /></label>
-            <label className="block"><span className="text-xs text-white/50">Latitude</span>
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" /></label>
+            <label className="block"><span className="text-xs text-text-muted">Latitude</span>
               <input type="number" step="0.5" value={ednaForm.sample_lat} onChange={(e) => setEdnaForm({ ...ednaForm, sample_lat: +e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" /></label>
-            <label className="block"><span className="text-xs text-white/50">Longitude</span>
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" /></label>
+            <label className="block"><span className="text-xs text-text-muted">Longitude</span>
               <input type="number" step="0.5" value={ednaForm.sample_lon} onChange={(e) => setEdnaForm({ ...ednaForm, sample_lon: +e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" /></label>
-            <label className="block"><span className="text-xs text-white/50">Depth (m)</span>
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" /></label>
+            <label className="block"><span className="text-xs text-text-muted">Depth (m)</span>
               <input type="number" value={ednaForm.depth_m} onChange={(e) => setEdnaForm({ ...ednaForm, depth_m: +e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" /></label>
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" /></label>
             <button type="submit" disabled={ednaLoading}
-              className="col-span-2 md:col-span-4 bg-[#e64a19] hover:bg-[#d84315] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
-              {ednaLoading ? "Running..." : "🧬 Run eDNA Analysis"}
+              className="col-span-2 md:col-span-4 bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
+              {ednaLoading ? "Running..." : "Run eDNA Analysis"}
             </button>
           </form>
           {ednaLoading && <LoadingSpinner text="Running eDNA pipeline..." />}
@@ -199,7 +198,7 @@ export default function BiodiversityPage() {
 
       {tab === "ref" && (
         <div>
-          {refData && <p className="text-sm text-white/60 mb-4"><b>{refData.species_count}</b> species in reference database. Milestone AphiaIDs: {refData.milestone_species.join(", ")}</p>}
+          {refData && <p className="text-sm text-text-muted mb-4"><b>{refData.species_count}</b> species in reference database. Milestone AphiaIDs: {refData.milestone_species.join(", ")}</p>}
           <DataTable columns={[
             { key: "species", label: "Species" }, { key: "common", label: "Common Name" },
             { key: "aphia_id", label: "AphiaID" }, { key: "status", label: "WoRMS Status" },

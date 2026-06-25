@@ -3,31 +3,25 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/api";
 import type { HealthResponse } from "@/types/api";
 
-function Dot({ ok }: { ok: boolean }) {
-  return <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${ok ? "bg-green-500" : "bg-amber-500"}`} />;
-}
-
 export default function SystemStatus() {
   const { data } = useSWR<HealthResponse>("/health", fetcher, { refreshInterval: 30000 });
 
-  if (!data) return <div className="text-xs text-white/30 px-4">Connecting...</div>;
+  if (!data) return <div className="text-[10px] text-[rgba(220,235,233,0.4)] px-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Connecting...</div>;
 
   const dbOk = data.db === "ok";
   const mhiOk = data.mhi_model === "loaded";
   const sfzOk = data.sfz_model === "loaded";
-  const ragOk = data.rag === "ready";
 
   return (
-    <div className="px-4 py-2">
-      <div className="text-[0.62rem] uppercase tracking-wider text-white/35 font-semibold mb-1.5">System</div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-white/65">
-        <span><Dot ok={dbOk} />PostGIS</span>
-        <span><Dot ok={mhiOk} />MHI</span>
-        <span><Dot ok={sfzOk} />SFZ</span>
-        <span><Dot ok={ragOk} />RAG</span>
+    <div className="mx-4 p-[13px] rounded-[13px] bg-white/[0.06] border border-white/[0.08]">
+      <div className="flex items-center gap-2 mb-[9px]">
+        <span className="w-[7px] h-[7px] rounded-full bg-[#6fd29a]" style={{ animation: "pulse 2.4s infinite" }} />
+        <span className="text-[10px] tracking-[0.08em] text-[rgba(220,235,233,0.75)]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>SYSTEMS ONLINE</span>
       </div>
-      <div className="text-[0.65rem] text-white/30 mt-2">
-        ⛓️ {data.blockchain}
+      <div className="flex gap-[6px]">
+        <span className={`flex-1 text-center text-[9px] py-1 rounded-[6px] ${dbOk ? "bg-[rgba(143,211,200,0.12)] text-[#9fe0d6]" : "bg-[rgba(194,90,68,0.15)] text-[#e8887a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>API</span>
+        <span className={`flex-1 text-center text-[9px] py-1 rounded-[6px] ${dbOk ? "bg-[rgba(143,211,200,0.12)] text-[#9fe0d6]" : "bg-[rgba(194,90,68,0.15)] text-[#e8887a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>PostGIS</span>
+        <span className={`flex-1 text-center text-[9px] py-1 rounded-[6px] ${mhiOk && sfzOk ? "bg-[rgba(143,211,200,0.12)] text-[#9fe0d6]" : "bg-[rgba(212,154,46,0.15)] text-[#d4a43a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Models</span>
       </div>
     </div>
   );

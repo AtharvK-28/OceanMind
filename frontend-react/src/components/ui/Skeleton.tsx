@@ -1,6 +1,6 @@
 export function SkeletonCard() {
   return (
-    <div className="bg-gradient-to-br from-[#0e223d]/65 to-[#0a1628]/75 border border-[#4fc3f7]/12 rounded-xl p-4">
+    <div className="bg-white border border-card-border rounded-2xl p-4" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
       <div className="skeleton h-3 w-20 mb-3" />
       <div className="skeleton h-8 w-24 mb-2" />
       <div className="skeleton h-2 w-16" />
@@ -16,7 +16,7 @@ export function SkeletonMap() {
 
 export function SkeletonChart() {
   return (
-    <div className="bg-gradient-to-br from-[#0e223d]/65 to-[#0a1628]/75 border border-[#4fc3f7]/12 rounded-xl p-5">
+    <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
       <div className="skeleton h-3 w-32 mb-4" />
       <div className="flex items-end gap-2 h-[200px] pt-8">
         {[60, 85, 45, 70, 90, 55, 75, 40].map((h, i) => (

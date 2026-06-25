@@ -49,20 +49,19 @@ export default function MHIPage() {
   return (
     <div className="animate-page-enter">
       <HeroBanner
-        title="🌡️ Marine Health Index"
+        title="Marine Health Index"
         description="<b>Isolation Forest</b> anomaly detection across SST, Chlorophyll-a, Dissolved Oxygen, pH, and Salinity. Score 0–100 (lower = more stressed)."
-        gradient="from-[#1a237e] via-[#0d47a1] to-[#01579b]"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Controls */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Bounding Box</h3>
+          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">Bounding Box</h3>
           {(["lat_min", "lat_max", "lon_min", "lon_max"] as const).map((key) => (
             <label key={key} className="block">
-              <span className="text-xs text-white/50">{key.replace("_", " ").toUpperCase()}</span>
+              <span className="text-xs text-text-muted">{key.replace("_", " ").toUpperCase()}</span>
               <input type="number" value={bbox[key]} onChange={(e) => setBbox({ ...bbox, [key]: e.target.value })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
             </label>
           ))}
         </div>
@@ -88,12 +87,12 @@ export default function MHIPage() {
             </div>
           )}
 
-          <div className="bg-gradient-to-br from-[#0e223d]/65 to-[#0a1628]/75 border border-[#4fc3f7]/12 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider mb-3">Stress Level Distribution</h3>
+          <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+            <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">Stress Level Distribution</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={histogram}>
-                <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }} />
-                <YAxis tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                <XAxis dataKey="name" tick={{ fill: "#6d7e80", fontSize: 12 }} />
+                <YAxis tick={{ fill: "#8a9698", fontSize: 11 }} />
                 <Tooltip />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                   {histogram.map((h) => <Cell key={h.name} fill={h.fill} />)}
@@ -105,28 +104,28 @@ export default function MHIPage() {
       </div>
 
       {/* Single-point scorer */}
-      <div className="mt-8 bg-gradient-to-br from-[#0e223d]/65 to-[#0a1628]/75 border border-[#4fc3f7]/12 rounded-xl p-6">
-        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider mb-4">Single-Point MHI Score</h3>
+      <div className="mt-8 bg-white border border-card-border rounded-2xl p-6" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Single-Point MHI Score</h3>
         <form onSubmit={handleScore} className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {Object.entries(form).map(([key, val]) => (
             <label key={key} className="block">
-              <span className="text-xs text-white/50">{key.replace("_", " ")}</span>
+              <span className="text-xs text-text-muted">{key.replace("_", " ")}</span>
               <input type="number" step="0.1" value={val}
                 onChange={(e) => setForm({ ...form, [key]: parseFloat(e.target.value) || 0 })}
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
             </label>
           ))}
           <button type="submit" disabled={scoring}
-            className="col-span-2 md:col-span-5 bg-[#0288d1] hover:bg-[#0277bd] text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
+            className="col-span-2 md:col-span-5 bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
             {scoring ? "Computing..." : "Compute Score"}
           </button>
         </form>
         {score && (
           <div className="mt-4 flex items-center gap-4">
             <div className="text-3xl font-bold" style={{ color: mhiColor(score.mhi_score) }}>{score.mhi_score.toFixed(1)}</div>
-            <div className="text-white/60">/100</div>
+            <div className="text-text-muted">/100</div>
             <ResultBadge label={score.stress_level} color={stressColor(score.stress_level)} size="lg" />
-            {score.alert && <span className="text-red-400 font-medium">⚠️ Alert</span>}
+            {score.alert && <span className="text-[#c25a44] font-medium"><i className="ph ph-warning mr-1" />Alert</span>}
           </div>
         )}
       </div>
