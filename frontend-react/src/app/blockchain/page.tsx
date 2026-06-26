@@ -75,10 +75,58 @@ export default function BlockchainPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard label="Total Blocks" value={chain?.total_blocks ?? 0} />
-        <MetricCard label="Catch Records" value={chain?.total_catch_records ?? 0} />
-        <MetricCard label="Species Logged" value={chain?.species_logged?.length ?? 0} />
-        <MetricCard label="Ledger Type" value="SHA-256 Mock" />
+        <MetricCard label="Total Blocks" value={chain?.total_blocks ?? 0} icon="ph ph-cube" delta="SHA-256 hash chain" deltaColor="green" />
+        <MetricCard label="Catch Records" value={chain?.total_catch_records ?? 0} icon="ph ph-fish-simple" delta="Verified on ledger" deltaColor="green" />
+        <MetricCard label="Species Logged" value={chain?.species_logged?.length ?? 0} icon="ph ph-dna" delta={chain?.species_logged?.slice(0, 2).join(", ") ?? ""} deltaColor="green" />
+        <MetricCard label="Ledger Type" value="Mock" icon="ph ph-shield-check" delta="Phase 2: Hyperledger Fabric" deltaColor="amber" />
+      </div>
+
+      {/* Recent activity feed */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 mb-6">
+        <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="m-0 text-[16px] font-semibold text-text" style={{ fontFamily: "'Newsreader', serif" }}>Recent ledger activity</h3>
+            <span className="inline-flex items-center gap-[5px] text-[10.5px] text-accent" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+              <i className="ph ph-shield-check text-[13px]" /> verified
+            </span>
+          </div>
+          {[
+            { species: "Indian Mackerel", site: "Veraval, GJ", time: "07:42", kg: "210 kg", hash: "0x9f3a…b2" },
+            { species: "Oil Sardine", site: "Kochi, KL", time: "07:18", kg: "164 kg", hash: "0x41c8…7e" },
+            { species: "Yellowfin Tuna", site: "Vizag, AP", time: "06:55", kg: "88 kg", hash: "0xa7d0…1f" },
+            { species: "Giant Tiger Prawn", site: "Mangalore, KA", time: "06:31", kg: "52 kg", hash: "0x2be9…c4" },
+          ].map((l, i) => (
+            <div key={i} className="flex items-center gap-3 py-[11px] border-t border-[#f0ebdf]">
+              <span className="w-[34px] h-[34px] flex-none rounded-[9px] bg-zone-green-bg text-accent flex items-center justify-center">
+                <i className="ph ph-fish-simple text-[16px]" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-semibold text-text">{l.species}</div>
+                <div className="text-[11px] text-text-muted">{l.site} · {l.time}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[12.5px] text-text" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{l.kg}</div>
+                <div className="text-[9.5px] text-text-faint" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{l.hash}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Species logged */}
+        <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
+          <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Species on ledger</h3>
+          {(chain?.species_logged ?? ["Indian Mackerel", "Oil Sardine", "Yellowfin Tuna", "Giant Tiger Prawn"]).map((sp, i) => (
+            <div key={i} className="flex items-center gap-3 py-2.5 border-t border-[#f0ebdf] first:border-0">
+              <span className="w-7 h-7 flex-none rounded-lg bg-card-hover text-accent flex items-center justify-center">
+                <i className="ph-fill ph-fish-simple text-[14px]" />
+              </span>
+              <span className="text-[13px] text-text">{sp}</span>
+            </div>
+          ))}
+          <div className="mt-3 pt-3 border-t border-[#f0ebdf] text-[11px] text-text-faint" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            Genesis: {chain?.genesis_hash?.slice(0, 16) ?? "—"}…
+          </div>
+        </div>
       </div>
 
       <TabGroup tabs={[

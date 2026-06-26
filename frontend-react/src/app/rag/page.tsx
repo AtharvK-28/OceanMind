@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiPost } from "@/lib/api";
 import { SUGGESTED_RAG_QUERIES } from "@/lib/constants";
 import HeroBanner from "@/components/ui/HeroBanner";
@@ -20,6 +20,11 @@ export default function RAGPage() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<RAGQueryResponse | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; handleQuery("What is the current marine health status near Gujarat?"); }
+  }, []);
 
   async function handleQuery(q: string) {
     if (!q.trim()) return;
