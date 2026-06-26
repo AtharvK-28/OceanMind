@@ -43,15 +43,15 @@ db-stop: ## Stop the database container
 api: ## Run FastAPI backend (dev, hot-reload)
 	uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 
-frontend: ## Run Streamlit dashboard
-	streamlit run frontend/app.py --server.port 8501
+frontend: ## Run Next.js dashboard
+	cd frontend-react && npm run dev
 
 dev: ## Start DB + API + frontend (full local stack)
 	@$(MAKE) db
 	@echo "Starting API in background..."
 	uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 &
 	@sleep 2
-	streamlit run frontend/app.py --server.port 8501
+	cd frontend-react && npm run dev
 
 docker-up: ## Start full stack via Docker Compose
 	docker compose up --build
@@ -80,10 +80,10 @@ test-offline: ## Run all tests that don't require PostGIS
 # ── Code quality ──────────────────────────────────────────────────────────────
 
 lint: ## Run ruff linter
-	ruff check backend/ frontend/ tests/
+	ruff check backend/ tests/
 
 format: ## Auto-format with ruff
-	ruff format backend/ frontend/ tests/
+	ruff format backend/ tests/
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 
