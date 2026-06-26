@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { apiPost } from "@/lib/api";
 import HeroBanner from "@/components/ui/HeroBanner";
@@ -65,6 +65,22 @@ export default function FishingAdvisoryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; fetchAdvisory(); }
+  }, []);
+
+  async function fetchAdvisory() {
+    setLoading(true);
+    setError(null);
+    try {
+      setResult(await apiPost<AdvisoryResponse>("/api/v1/fishing/advisory", form));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch advisory");
+      setResult(null);
+    } finally { setLoading(false); }
+  }
+
   async function getAdvisory(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -90,30 +106,83 @@ export default function FishingAdvisoryPage() {
         description="Live SST, wave, and wind data from <b>Open-Meteo Marine API</b>. 7-day history + 3-day forecast → actionable GO / CAUTION / AVOID recommendation."
       />
 
-      <form onSubmit={getAdvisory} className="max-w-2xl grid grid-cols-3 gap-4 mb-6">
-        <label className="block">
-          <span className="text-xs text-text-muted">Latitude</span>
-          <input type="number" step="0.1" value={form.lat}
-            onChange={(e) => setForm({ ...form, lat: +e.target.value })}
-            className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
-        </label>
-        <label className="block">
-          <span className="text-xs text-text-muted">Longitude</span>
-          <input type="number" step="0.1" value={form.lon}
-            onChange={(e) => setForm({ ...form, lon: +e.target.value })}
-            className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
-        </label>
-        <label className="block">
-          <span className="text-xs text-text-muted">Site Name</span>
-          <input type="text" value={form.site_name}
-            onChange={(e) => setForm({ ...form, site_name: e.target.value })}
-            className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-faint" />
-        </label>
-        <button type="submit" disabled={loading}
-          className="col-span-3 bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 font-medium transition-colors disabled:opacity-50">
-          {loading ? "Fetching live data..." : "Get Fishing Advisory"}
-        </button>
-      </form>
+      {/* Quick location picks + form */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 mb-6">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-3" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Quick picks — tap a location</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+            {[
+              { name: "Kochi Shelf", lat: 9.5, lon: 75.5, region: "Kerala" },
+              { name: "Veraval Bank", lat: 20.9, lon: 69.5, region: "Gujarat" },
+              { name: "Mangalore", lat: 12.5, lon: 74.5, region: "Karnataka" },
+              { name: "Vizag Deep", lat: 17.2, lon: 83.0, region: "Andhra Pradesh" },
+              { name: "Lakshadweep", lat: 10.5, lon: 72.0, region: "Islands" },
+              { name: "Chennai Coast", lat: 13.0, lon: 80.5, region: "Tamil Nadu" },
+            ].map((loc) => (
+              <button key={loc.name} onClick={() => { setForm({ lat: loc.lat, lon: loc.lon, site_name: loc.name }); }}
+                className="flex items-center gap-3 bg-white border border-card-border rounded-xl px-4 py-3 text-left hover:border-accent/30 hover:-translate-y-0.5 transition-all"
+                style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
+                <span className="w-8 h-8 flex-none rounded-lg bg-[#eaf3ef] text-accent flex items-center justify-center">
+                  <i className="ph ph-map-pin" style={{ fontSize: 16 }} />
+                </span>
+                <div>
+                  <div className="text-[13px] font-semibold text-text">{loc.name}</div>
+                  <div className="text-[10px] text-text-muted">{loc.region}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={getAdvisory} className="grid grid-cols-3 gap-4">
+            <label className="block">
+              <span className="text-xs text-text-muted">Latitude</span>
+              <input type="number" step="0.1" value={form.lat}
+                onChange={(e) => setForm({ ...form, lat: +e.target.value })}
+                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text" />
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Longitude</span>
+              <input type="number" step="0.1" value={form.lon}
+                onChange={(e) => setForm({ ...form, lon: +e.target.value })}
+                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text" />
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Site Name</span>
+              <input type="text" value={form.site_name}
+                onChange={(e) => setForm({ ...form, site_name: e.target.value })}
+                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-faint" />
+            </label>
+            <button type="submit" disabled={loading}
+              className="col-span-3 bg-accent hover:bg-accent-dark text-white rounded-xl py-3 font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              <i className="ph ph-compass" style={{ fontSize: 17 }} />
+              {loading ? "Fetching live data..." : "Get Fishing Advisory"}
+            </button>
+          </form>
+        </div>
+
+        {/* What you get panel */}
+        <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+          <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>What you get</h3>
+          {[
+            { icon: "ph ph-thermometer-simple", label: "Sea Surface Temperature", desc: "7-day history + current" },
+            { icon: "ph ph-waves", label: "Wave Height Forecast", desc: "3-day ahead, hourly" },
+            { icon: "ph ph-wind", label: "Wind Speed & Direction", desc: "3-day ahead, hourly" },
+            { icon: "ph ph-target", label: "Fishing Score (0–100)", desc: "GO / CAUTION / AVOID" },
+            { icon: "ph ph-clock", label: "Best Time Windows", desc: "Optimal hours to head out" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-3 py-2.5 border-t border-[#f0ebdf] first:border-0">
+              <i className={`${item.icon} text-[16px] text-accent`} />
+              <div>
+                <div className="text-[12.5px] font-medium text-text">{item.label}</div>
+                <div className="text-[10.5px] text-text-muted">{item.desc}</div>
+              </div>
+            </div>
+          ))}
+          <div className="mt-3 pt-3 border-t border-[#f0ebdf] text-[10px] text-text-faint" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            Source: Open-Meteo Marine API · ERA5 + GFS · Free, no key
+          </div>
+        </div>
+      </div>
 
       {loading && <LoadingSpinner text="Pulling real-time marine data..." />}
 
