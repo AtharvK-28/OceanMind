@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { label: "Fishing Zones", href: "/sfz", icon: "ph ph-map-trifold", section: "expert" },
   { label: "Migration Forecast", href: "/migration", icon: "ph ph-fish", section: "expert" },
   { label: "Biodiversity & CV", href: "/biodiversity", icon: "ph ph-microscope", section: "expert" },
+  { label: "Species Encyclopedia", href: "/species", icon: "ph ph-book-open", section: "expert" },
   { label: "Digital Twin", href: "/digital-twin", icon: "ph ph-globe-hemisphere-east", section: "expert" },
   { label: "Ask OceanMind", href: "/rag", icon: "ph ph-chat-circle-dots", section: "expert" },
   { label: "Catch Ledger", href: "/blockchain", icon: "ph ph-cube", section: "expert" },

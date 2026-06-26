@@ -82,6 +82,17 @@ html {
 }
 .leaflet-popup-tip { background: #fff; }
 
+/* Thin styled scrollbar — matches warm cream palette */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(23,48,57,0.12); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(23,48,57,0.22); }
+* { scrollbar-width: thin; scrollbar-color: rgba(23,48,57,0.12) transparent; }
+
+/* Hidden scrollbar utility */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Live pulse */
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }

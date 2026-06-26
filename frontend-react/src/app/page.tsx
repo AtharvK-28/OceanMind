@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import { SPECIES_OPTIONS, LANDING_SITES } from "@/lib/constants";
+import FishingCalendar from "@/components/ui/FishingCalendar";
 import type { SFZCurrentResponse, MHIStatusResponse, ChainSummaryResponse, CatchTraceResponse, CatchRecord } from "@/types/api";
 
 const PORTS: Record<string, { lat: number; lon: number; region: string; coast: string }> = {
@@ -61,6 +62,69 @@ export default function FisherView() {
     .map((c) => ({ ...c, dist: distanceKm(c.latitude, c.longitude, portInfo.lat, portInfo.lon) }))
     .sort((a, b) => a.dist - b.dist)[0];
   const localSST = nearestCell ? (28 + Math.sin((new Date().getMonth() + 1) * Math.PI / 6) * 1.5).toFixed(1) : "—";
+
+  // Offshore coordinates for weather API (port coords are on land, shift ~30km into ocean)
+  const OFFSHORE: Record<string, { lat: number; lon: number }> = {
+    "Veraval, Gujarat":     { lat: 20.0, lon: 69.0 },
+    "Kochi, Kerala":        { lat: 9.8, lon: 75.5 },
+    "Chennai, Tamil Nadu":  { lat: 13.0, lon: 81.0 },
+    "Visakhapatnam, AP":    { lat: 17.5, lon: 84.0 },
+    "Mangalore, Karnataka": { lat: 12.5, lon: 74.3 },
+  };
+  const offshore = OFFSHORE[port] ?? { lat: portInfo.lat, lon: portInfo.lon - 0.5 };
+
+  // Real weather from Open-Meteo via fishing advisory API
+  const [weather, setWeather] = useState<{ sst: string; sstNum: number; wind: string; windDir: string; wave: string; vis: string; highTide: string; lowTide: string } | null>(null);
+  useEffect(() => {
+    setWeather(null);
+    apiPost<{ advisory: { current: { sst_c: number | null; wave_height_m: number | null; wind_speed_kmh: number | null }; tides?: { high_tide?: { time: string; height_m: number } | null; low_tide?: { time: string; height_m: number } | null } } }>("/api/v1/fishing/advisory", {
+      lat: offshore.lat, lon: offshore.lon, site_name: port,
+    }).then(res => {
+      const c = res.advisory.current;
+      const tides = res.advisory.tides;
+      const windKmh = c.wind_speed_kmh ?? 0;
+      const windKn = (windKmh * 0.54).toFixed(0);
+      const sstVal = c.sst_c ?? parseFloat(localSST);
+      setWeather({
+        sst: `${sstVal.toFixed(1)}°`,
+        sstNum: sstVal,
+        wind: `${windKn} kn`,
+        windDir: windKmh > 15 ? "SW" : "NE",
+        wave: c.wave_height_m != null ? `${c.wave_height_m} m` : "—",
+        vis: (c.wave_height_m ?? 0) < 1.5 ? "Good" : "Moderate",
+        highTide: tides?.high_tide?.time ?? "—",
+        lowTide: tides?.low_tide?.time ?? "—",
+      });
+    }).catch(() => {
+      setWeather({ sst: `${localSST}°`, sstNum: parseFloat(localSST), wind: "—", windDir: "—", wave: "—", vis: "—", highTide: "—", lowTide: "—" });
+    });
+  }, [port]);
+
+  // Calculate sunset from latitude + day of year (simplified solar equation)
+  const sunsetTime = (() => {
+    const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    const latRad = portInfo.lat * Math.PI / 180;
+    const decl = -23.45 * Math.cos(2 * Math.PI * (doy + 10) / 365) * Math.PI / 180;
+    const ha = Math.acos(-Math.tan(latRad) * Math.tan(decl)) * 180 / Math.PI;
+    const sunsetHour = 12 + ha / 15 + 5.5 - portInfo.lon / 15; // IST offset
+    const h = Math.floor(sunsetHour);
+    const m = Math.round((sunsetHour - h) * 60);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h > 12 ? h - 12 : h;
+    return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+  })();
+  const returnByTime = (() => {
+    const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    const latRad = portInfo.lat * Math.PI / 180;
+    const decl = -23.45 * Math.cos(2 * Math.PI * (doy + 10) / 365) * Math.PI / 180;
+    const ha = Math.acos(-Math.tan(latRad) * Math.tan(decl)) * 180 / Math.PI;
+    const sunsetHour = 12 + ha / 15 + 5.5 - portInfo.lon / 15 - 0.5; // 30 min buffer
+    const h = Math.floor(sunsetHour);
+    const m = Math.round((sunsetHour - h) * 60);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h > 12 ? h - 12 : h;
+    return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+  })();
 
   const month = new Date().getMonth() + 1;
   const isMonsoon = month >= 6 && month <= 9;
@@ -182,7 +246,7 @@ export default function FisherView() {
         </div>
         <div className="bg-card-hover border border-card-border rounded-xl p-3.5 text-center
                         transition-all hover:border-accent/15">
-          <div className="text-2xl font-bold text-text">{localSST}<span className="text-sm text-text-faint">°C</span></div>
+          <div className="text-2xl font-bold text-text">{weather?.sstNum?.toFixed(1) ?? localSST}<span className="text-sm text-text-faint">°C</span></div>
           <div className="text-[0.65rem] text-text-faint mt-0.5 uppercase tracking-wider">Sea temp</div>
         </div>
       </div>
@@ -198,42 +262,48 @@ export default function FisherView() {
               points={mapPoints}
             />
             <MapLegend title="Zones" items={[
-              { color: "#4caf50", label: "Safe — go fish" },
-              { color: "#ff9800", label: "Caution" },
-              { color: "#f44336", label: "Avoid" },
+              { color: "#3a8c5f", label: "Recommended" },
+              { color: "#d49a2e", label: "Caution" },
+              { color: "#c25a44", label: "Avoid" },
             ]} />
           </div>
         </div>
 
         <div className="space-y-3">
-          {/* Local conditions */}
-          <div className="bg-white border border-card-border rounded-2xl p-4">
-            <h3 className="text-[0.65rem] uppercase tracking-wider text-text-faint font-semibold mb-3">
-              Conditions near {port.split(",")[0]}
-            </h3>
-            <div className="space-y-2.5 text-sm">
-              <div className="flex justify-between">
-                <span className="text-text-muted">Coast</span>
-                <span className="text-text">{portInfo.coast}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Sea temp</span>
-                <span className="text-text">{localSST}°C</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Alerts nearby</span>
-                <span className={nearbyAlerts === 0 ? "text-[#3a8c5f]" : "text-[#d49a2e]"}>
-                  {nearbyAlerts === 0 ? "None" : nearbyAlerts}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Season</span>
-                <span className="text-text">{isMonsoon ? "Monsoon" : "Open season"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Zones in range</span>
-                <span className="text-text">{nearbyFeatures.length}</span>
-              </div>
+          {/* Sea & Sky */}
+          <div className="bg-white border border-card-border rounded-2xl p-4" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 8px 22px rgba(23,48,57,0.05)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="m-0 text-[15px] font-semibold text-text" style={{ fontFamily: "'Newsreader', serif" }}>Sea & sky</h3>
+              <span className="text-[10px] text-text-muted" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>INCOIS · IMD</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {[
+                { icon: "ph ph-wind", value: weather?.wind ?? "—", sub: weather?.windDir ?? "—" },
+                { icon: "ph ph-waves", value: weather?.wave ?? "—", sub: "SWELL" },
+                { icon: "ph ph-thermometer-simple", value: weather?.sst ?? `${localSST}°`, sub: "WATER" },
+                { icon: "ph ph-eye", value: weather?.vis ?? "—", sub: "VIS" },
+              ].map((w) => (
+                <div key={w.sub}>
+                  <i className={`${w.icon} text-[18px] text-accent`} />
+                  <div className="text-[15px] font-semibold text-text mt-1" style={{ fontFamily: "'Newsreader', serif" }}>{w.value}</div>
+                  <div className="text-[9px] text-text-muted">{w.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f0ebdf] text-[12px] text-text-secondary">
+              <span className="flex items-center gap-1"><i className="ph ph-arrow-up text-[12px] text-accent" /> High tide {weather?.highTide ?? "—"}</span>
+              <span className="flex items-center gap-1"><i className="ph ph-arrow-down text-[12px] text-accent" /> Low tide {weather?.lowTide ?? "—"}</span>
+            </div>
+          </div>
+
+          {/* Safety advisory */}
+          <div className="flex items-center gap-3 bg-[#fbf2e4] border border-[#efe2cc] rounded-2xl px-4 py-3.5">
+            <div className="w-10 h-10 flex-none rounded-xl bg-[rgba(217,139,74,0.16)] text-[#c0772f] flex items-center justify-center">
+              <i className="ph-fill ph-sun-dim text-[22px]" />
+            </div>
+            <div>
+              <div className="text-[13px] font-semibold text-text">Head back by {returnByTime}</div>
+              <div className="text-[11.5px] text-[#8a7a5e] mt-0.5">Sunset {sunsetTime} · keep 30 min buffer</div>
             </div>
           </div>
 
@@ -245,11 +315,14 @@ export default function FisherView() {
             {localHistory.length === 0 ? (
               <p className="text-xs text-text-faint py-2">No catches logged at this site yet.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {localHistory.slice(0, 5).map((r) => (
-                  <div key={r.transaction_id} className="flex justify-between items-center text-sm">
-                    <span className="text-text-muted">{r.species_name}</span>
-                    <span className="text-text-faint text-xs">{r.quantity_kg} kg</span>
+                  <div key={r.transaction_id} className="flex items-center gap-2.5 py-1.5">
+                    <span className="w-6 h-6 flex-none rounded-md bg-zone-green-bg text-accent flex items-center justify-center">
+                      <i className="ph ph-fish-simple text-[13px]" />
+                    </span>
+                    <span className="flex-1 text-[12.5px] text-text-secondary">{r.species_name}</span>
+                    <span className="text-[12px] text-text font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{r.quantity_kg} kg</span>
                   </div>
                 ))}
               </div>
@@ -258,17 +331,19 @@ export default function FisherView() {
 
           {/* Quick nav */}
           <div className="bg-white border border-card-border rounded-2xl p-4">
-            <h3 className="text-[0.65rem] uppercase tracking-wider text-text-faint font-semibold mb-3">More info</h3>
-            <div className="space-y-2">
-              <a href="/migration" className="block text-sm text-text-muted hover:text-accent transition-colors">
-                Where are fish moving this week?
-              </a>
-              <a href="/biodiversity" className="block text-sm text-text-muted hover:text-accent transition-colors">
-                What species are near {port.split(",")[0]}?
-              </a>
-              <a href="/digital-twin" className="block text-sm text-text-muted hover:text-accent transition-colors">
-                What if the sea warms +2°C?
-              </a>
+            <h3 className="text-[0.65rem] uppercase tracking-wider text-text-faint font-semibold mb-3">Explore</h3>
+            <div className="space-y-1">
+              {[
+                { href: "/fishing-advisory", icon: "ph ph-target", label: "Real-time fishing advisory" },
+                { href: "/migration", icon: "ph ph-fish", label: "Where are fish moving?" },
+                { href: "/biodiversity", icon: "ph ph-microscope", label: `Species near ${port.split(",")[0]}` },
+                { href: "/digital-twin", icon: "ph ph-globe-hemisphere-east", label: "What if sea warms +2°C?" },
+              ].map((link) => (
+                <a key={link.href} href={link.href} className="flex items-center gap-3 py-2 text-[13px] text-text-secondary hover:text-accent transition-colors">
+                  <i className={`${link.icon} text-[15px] text-accent`} />
+                  {link.label}
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -331,6 +406,10 @@ export default function FisherView() {
           </form>
         </div>
       )}
+
+      <div className="mb-4">
+        <FishingCalendar compact />
+      </div>
 
       <div className="text-center text-[0.6rem] text-text-faint pb-2">
         INCOIS + GFW data · Updated weekly · {portInfo.coast} coverage · OceanMind AI

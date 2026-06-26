@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { fetcher } from "@/lib/api";
@@ -14,13 +15,31 @@ import type { MHIStatusResponse, SFZCurrentResponse, ChainSummaryResponse, SHAPE
 const ZONE_COLORS: Record<string, string> = { GREEN: "#3a8c5f", AMBER: "#d49a2e", RED: "#c25a44" };
 const cardShadow = "0 1px 2px rgba(23,48,57,0.04), 0 12px 30px rgba(23,48,57,0.04)";
 
+const ZONE_NAMES: Record<string, { name: string; desc: string; sst: string; dist: string }> = {
+  "20.9,69.5": { name: "Veraval Bank", desc: "Strong sardine–mackerel signal on the Saurashtra shelf. Sustainable to fish.", sst: "27.4°", dist: "12" },
+  "9.97,75.8": { name: "Kochi Shelf", desc: "Calm seas and productive upwelling band. Peak mackerel returns expected.", sst: "28.6°", dist: "14" },
+  "12.87,74.5": { name: "Mangalore Bank", desc: "Productive upwelling band. Strong mackerel returns expected at dawn.", sst: "28.1°", dist: "9" },
+  "17.7,83.5": { name: "Vizag Deep", desc: "Good tuna outlook along the canyon edge. Steady winds forecast.", sst: "28.3°", dist: "21" },
+};
+
 export default function Dashboard() {
+  const router = useRouter();
   const { data: mhi } = useSWR<MHIStatusResponse>("/api/v1/mhi/status", fetcher, { refreshInterval: 30000 });
   const { data: sfz, isLoading: sfzLoading } = useSWR<SFZCurrentResponse>("/api/v1/sfz/current", fetcher, { refreshInterval: 30000 });
   const { data: chain } = useSWR<ChainSummaryResponse>("/api/v1/trace/chain-summary", fetcher, { refreshInterval: 10000 });
 
   const [secs, setSecs] = useState(0);
   useEffect(() => { const t = setInterval(() => setSecs(s => (s >= 59 ? 1 : s + 1)), 1000); return () => clearInterval(t); }, []);
+
+  // Find first GREEN zone from real SFZ data
+  const firstGreen = sfz?.geojson.features.find(f => f.properties.ecological_class === "GREEN");
+  const greenCoords = firstGreen ? `${firstGreen.geometry.coordinates[1].toFixed(1)},${firstGreen.geometry.coordinates[0].toFixed(1)}` : null;
+  const greenMatch = greenCoords ? Object.entries(ZONE_NAMES).find(([k]) => {
+    const [kLat, kLon] = k.split(",").map(Number);
+    const [gLat, gLon] = greenCoords.split(",").map(Number);
+    return Math.abs(kLat - gLat) < 2 && Math.abs(kLon - gLon) < 2;
+  }) : null;
+  const topZone = greenMatch ? greenMatch[1] : { name: "Kochi Shelf", desc: "Calm seas and productive upwelling. Sustainable to fish.", sst: "28.6°", dist: "14" };
 
   const mhiTotal = mhi?.total_cells ?? 0;
   const mhiAlerts = mhi?.alerts_active ?? 0;
@@ -158,18 +177,18 @@ export default function Dashboard() {
               <i className="ph-fill ph-sun-horizon text-[18px] text-[#d98b4a]" />
               <span className="text-[10px] tracking-[0.12em] uppercase text-[#b08043]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Good fishing today</span>
             </div>
-            <div className="text-[23px] font-semibold text-[#16323a] leading-tight" style={{ fontFamily: "'Newsreader', serif" }}>Kochi Shelf</div>
+            <div className="text-[23px] font-semibold text-[#16323a] leading-tight" style={{ fontFamily: "'Newsreader', serif" }}>{topZone.name}</div>
             <div className="inline-flex items-center gap-[6px] mt-[9px] px-[11px] py-[5px] rounded-full bg-zone-green-bg border border-[#cfe6dd]">
               <span className="w-[7px] h-[7px] rounded-full bg-zone-green" />
               <span className="text-[11.5px] font-semibold text-[#2f6f4c]">GREEN · Recommended</span>
             </div>
-            <p className="mt-[14px] mb-0 text-[13.5px] leading-[1.55] text-[#52636a]">Calm seas and a strong sardine–mackerel signal. Sustainable to fish through Thursday.</p>
+            <p className="mt-[14px] mb-0 text-[13.5px] leading-[1.55] text-[#52636a]">{topZone.desc}</p>
 
             <div className="grid grid-cols-3 gap-[10px] mt-4">
               {[
-                { icon: "ph ph-thermometer-simple", value: "28.6°", label: "SEA TEMP" },
+                { icon: "ph ph-thermometer-simple", value: topZone.sst, label: "SEA TEMP" },
                 { icon: "ph ph-fish", value: "High", label: "CATCH ODDS" },
-                { icon: "ph ph-navigation-arrow", value: "14", label: "NAUT. MILES" },
+                { icon: "ph ph-navigation-arrow", value: topZone.dist, label: "NAUT. MILES" },
               ].map((s) => (
                 <div key={s.label} className="text-center p-[11px] rounded-xl bg-card-hover border border-card-border">
                   <i className={`${s.icon} text-[17px] text-[#2a6f7c]`} />
@@ -180,10 +199,10 @@ export default function Dashboard() {
             </div>
 
             <div className="flex gap-[10px] mt-4">
-              <button className="flex-1 flex items-center justify-center gap-[7px] py-[13px] border-none rounded-xl bg-accent text-white text-[13.5px] font-semibold cursor-pointer" style={{ fontFamily: "inherit" }}>
+              <button onClick={() => router.push("/fishing-advisory")} className="flex-1 flex items-center justify-center gap-[7px] py-[13px] border-none rounded-xl bg-accent text-white text-[13.5px] font-semibold cursor-pointer" style={{ fontFamily: "inherit" }}>
                 <i className="ph-fill ph-navigation-arrow text-[15px]" /> Set course
               </button>
-              <button className="flex-none flex items-center justify-center gap-[7px] py-[13px] px-4 border border-[#d8cfbc] rounded-xl bg-white text-[#2a6f7c] text-[13.5px] font-semibold cursor-pointer" style={{ fontFamily: "inherit" }}>
+              <button onClick={() => router.push("/blockchain")} className="flex-none flex items-center justify-center gap-[7px] py-[13px] px-4 border border-[#d8cfbc] rounded-xl bg-white text-[#2a6f7c] text-[13.5px] font-semibold cursor-pointer" style={{ fontFamily: "inherit" }}>
                 <i className="ph ph-plus-circle text-[15px]" /> Log catch
               </button>
             </div>

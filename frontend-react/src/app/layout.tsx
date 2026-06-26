@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Sidebar from "@/components/layout/Sidebar";
 import { ToastProvider } from "@/components/ui/Toast";
+import DemoAlerts from "@/components/ui/DemoAlerts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen flex" style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif", background: "#f1ece1", color: "#16323a" }}>
         <ToastProvider>
+          <DemoAlerts />
           <Sidebar />
           <main className="flex-1 overflow-y-auto p-6 pt-16 lg:pt-6 max-w-[1280px]">
             {children}
