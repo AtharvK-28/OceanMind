@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { fetcher, apiPost } from "@/lib/api";
 import HeroBanner from "@/components/ui/HeroBanner";
@@ -36,6 +36,11 @@ export default function DigitalTwinPage() {
     const p = presets.find((x) => x.id === id);
     if (p) { setSstDelta(p.sst_delta_c); setDuration(p.duration_weeks); }
   }
+
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; runScenario(); }
+  }, []);
 
   async function runScenario() {
     setRunning(true);

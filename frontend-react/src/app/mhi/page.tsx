@@ -14,7 +14,6 @@ import type { MHIStatusResponse, MHIScoreResponse } from "@/types/api";
 
 export default function MHIPage() {
   const [bbox, setBbox] = useState({ lat_min: "5", lat_max: "25", lon_min: "60", lon_max: "100" });
-  const params = Object.fromEntries(Object.entries(bbox));
   const { data, isLoading } = useSWR<MHIStatusResponse>(
     `/api/v1/mhi/status?lat_min=${bbox.lat_min}&lat_max=${bbox.lat_max}&lon_min=${bbox.lon_min}&lon_max=${bbox.lon_max}`,
     fetcher
@@ -28,7 +27,7 @@ export default function MHIPage() {
     lat: c.latitude, lng: c.longitude,
     color: mhiColor(c.mhi_score),
     tooltip: `MHI ${c.mhi_score.toFixed(0)} | ${c.stress_level}`,
-    popup: `<b>MHI:</b> ${c.mhi_score.toFixed(1)}<br><b>Stress:</b> ${c.stress_level}<br><b>Alert:</b> ${c.alert ? "⚠️ YES" : "No"}`,
+    popup: `<b>MHI:</b> ${c.mhi_score.toFixed(1)}<br><b>Stress:</b> ${c.stress_level}<br><b>Alert:</b> ${c.alert ? "YES" : "No"}`,
   }));
 
   const histogram = ["CRITICAL", "WARNING", "WATCH", "NORMAL"].map((level) => ({
@@ -40,17 +39,15 @@ export default function MHIPage() {
   async function handleScore(e: React.FormEvent) {
     e.preventDefault();
     setScoring(true);
-    try {
-      const res = await apiPost<MHIScoreResponse>("/api/v1/mhi/score", form);
-      setScore(res);
-    } finally { setScoring(false); }
+    try { setScore(await apiPost<MHIScoreResponse>("/api/v1/mhi/score", form)); }
+    finally { setScoring(false); }
   }
 
   return (
     <div className="animate-page-enter">
       <HeroBanner
         title="Marine Health Index"
-        description="<b>Isolation Forest</b> anomaly detection across SST, Chlorophyll-a, Dissolved Oxygen, pH, and Salinity. Score 0–100 (lower = more stressed)."
+        description="<b>Isolation Forest</b> anomaly detection across SST, Chlorophyll-a, Dissolved Oxygen, pH, and Salinity. Score 0–100 (lower = more stressed). Data from <b>real ARGO GDAC float profiles</b>."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -61,7 +58,7 @@ export default function MHIPage() {
             <label key={key} className="block">
               <span className="text-xs text-text-muted">{key.replace("_", " ").toUpperCase()}</span>
               <input type="number" value={bbox[key]} onChange={(e) => setBbox({ ...bbox, [key]: e.target.value })}
-                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
+                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
             </label>
           ))}
         </div>
@@ -69,20 +66,20 @@ export default function MHIPage() {
         {/* Map + charts */}
         <div className="lg:col-span-3 space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Grid Cells" value={data?.total_cells ?? 0} />
-            <MetricCard label="Alerts Active" value={data?.alerts_active ?? 0} deltaColor="red" />
-            <MetricCard label="Model" value="Isolation Forest" />
-            <MetricCard label="Coverage" value="Indian EEZ" />
+            <MetricCard label="Grid Cells" value={data?.total_cells ?? 0} icon="ph ph-grid-four" />
+            <MetricCard label="Alerts Active" value={data?.alerts_active ?? 0} icon="ph ph-warning" deltaColor="red" delta={`${data?.alerts_active ?? 0} cells stressed`} />
+            <MetricCard label="Model" value="IsoForest" icon="ph ph-brain" />
+            <MetricCard label="Data Source" value="ARGO" icon="ph ph-wave-sine" delta="Real float profiles" deltaColor="green" />
           </div>
 
           {isLoading ? <LoadingSpinner text="Computing MHI grid..." /> : (
             <div className="relative animate-data-enter">
               <MapContainer height="420px" points={mapPoints} />
               <MapLegend title="MHI Score" items={[
-                { color: "#d32f2f", label: "< 25 — Critical" },
-                { color: "#f57c00", label: "25–50 — Warning" },
-                { color: "#fbc02d", label: "50–65 — Watch" },
-                { color: "#388e3c", label: "> 65 — Normal" },
+                { color: "#c25a44", label: "< 25 — Critical" },
+                { color: "#d49a2e", label: "25–50 — Warning" },
+                { color: "#d98b4a", label: "50–65 — Watch" },
+                { color: "#3a8c5f", label: "> 65 — Normal" },
               ]} />
             </div>
           )}
@@ -100,6 +97,36 @@ export default function MHIPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+
+          {/* Stress breakdown cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: "Critical", icon: "ph-fill ph-warning", color: "#c25a44", bg: "#f6e6e1", count: histogram.find(h => h.name === "CRITICAL")?.count ?? 0 },
+              { label: "Warning", icon: "ph ph-warning-circle", color: "#d49a2e", bg: "#f7efdb", count: histogram.find(h => h.name === "WARNING")?.count ?? 0 },
+              { label: "Watch", icon: "ph ph-eye", color: "#d98b4a", bg: "#faf3e8", count: histogram.find(h => h.name === "WATCH")?.count ?? 0 },
+              { label: "Normal", icon: "ph-fill ph-shield-check", color: "#3a8c5f", bg: "#eaf3ef", count: histogram.find(h => h.name === "NORMAL")?.count ?? 0 },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border border-card-border p-4 flex items-center gap-3" style={{ background: s.bg }}>
+                <i className={s.icon} style={{ fontSize: 20, color: s.color }} />
+                <div>
+                  <div className="text-[20px] font-semibold" style={{ color: s.color, fontFamily: "'Newsreader', serif" }}>{s.count}</div>
+                  <div className="text-[10px] text-text-muted uppercase tracking-wider" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{s.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Data quality */}
+          <div className="flex items-center justify-between bg-white border border-card-border rounded-xl px-5 py-3" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
+            <div className="flex items-center gap-2 text-[12px] text-text-muted">
+              <i className="ph ph-database text-accent" style={{ fontSize: 15 }} />
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>ARGO GDAC · INCOIS · Climatology</span>
+            </div>
+            <div className="flex items-center gap-2 text-[12px]">
+              <span className="text-text-muted">Coverage:</span>
+              <span className="font-semibold text-[#3a8c5f]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Indian EEZ</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -112,7 +139,7 @@ export default function MHIPage() {
               <span className="text-xs text-text-muted">{key.replace("_", " ")}</span>
               <input type="number" step="0.1" value={val}
                 onChange={(e) => setForm({ ...form, [key]: parseFloat(e.target.value) || 0 })}
-                className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
+                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
             </label>
           ))}
           <button type="submit" disabled={scoring}
