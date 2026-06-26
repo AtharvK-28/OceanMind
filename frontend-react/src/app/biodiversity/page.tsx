@@ -78,7 +78,8 @@ export default function BiodiversityPage() {
 
       {tab === "cv" && (
         <div className="space-y-6">
-          <form onSubmit={runCV} className="max-w-2xl space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+          <form onSubmit={runCV} className="space-y-4">
             {/* Image upload — primary input */}
             <div className="border-2 border-dashed border-[#d8cfbc] rounded-xl p-6 text-center
                             hover:border-accent/40 transition-colors relative">
@@ -128,6 +129,37 @@ export default function BiodiversityPage() {
             </button>
             {cvImage && <p className="text-xs text-[#3a8c5f]/70 text-center">YOLOv8 detection + ResNet50 species classifier will run on your photo</p>}
           </form>
+
+          {/* Model info sidebar */}
+          <div className="space-y-4">
+            <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
+              <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>CV Pipeline</h3>
+              {[
+                { icon: "ph ph-bounding-box", label: "Detection", value: "YOLOv8" },
+                { icon: "ph ph-brain", label: "Classifier", value: "ResNet50" },
+                { icon: "ph ph-fish", label: "Species", value: "13 trained" },
+                { icon: "ph ph-database", label: "Taxonomy", value: "WoRMS AphiaID" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-3 py-2 border-t border-[#f0ebdf] first:border-0">
+                  <i className={`${item.icon} text-[15px] text-accent`} />
+                  <div className="flex-1">
+                    <div className="text-[11px] text-text-muted">{item.label}</div>
+                    <div className="text-[13px] font-semibold text-text">{item.value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
+              <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-3" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Trained species</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {["Indian Mackerel", "Oil Sardine", "Hilsa", "Pomfret", "Rohu", "Catla", "Bombay Duck", "Sea Bass", "Seer Fish", "Mrigal", "Ribbonfish", "Indian Salmon", "Basa"].map((sp) => (
+                  <span key={sp} className="text-[10px] px-2 py-1 rounded-md bg-card-hover border border-card-border text-text-secondary" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{sp}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+          </div>
           {cvLoading && <LoadingSpinner text="Running CV pipeline..." />}
           {cvResult && !cvLoading && (
             <>
