@@ -13,6 +13,7 @@ export default function Sidebar() {
   );
 
   const fisherItems = NAV_ITEMS.filter((i) => i.section === "fisher");
+  const policyItems = NAV_ITEMS.filter((i) => i.section === "policy");
   const expertItems = NAV_ITEMS.filter((i) => i.section === "expert");
 
   return (
@@ -63,6 +64,13 @@ export default function Sidebar() {
           <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] py-1 pb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>On the water</div>
           <div className="space-y-[3px] mb-3">
             {fisherItems.map((item) => (
+              <NavLink key={item.href} {...item} />
+            ))}
+          </div>
+
+          <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] pt-4 pb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Policy & conservation</div>
+          <div className="space-y-[2px] mb-3">
+            {policyItems.map((item) => (
               <NavLink key={item.href} {...item} />
             ))}
           </div>
