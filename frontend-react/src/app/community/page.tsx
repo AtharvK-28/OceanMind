@@ -35,7 +35,10 @@ const fetchHistory = (path: string) => apiGet<{ records: CatchRecord[] }>(path).
 
 export default function CommunityPage() {
   const { t } = useI18n();
-  const { data: records = [], isLoading, error, mutate } = useSWR<CatchRecord[]>("/api/v1/trace/history", fetchHistory, { refreshInterval: 15000 });
+  // This SWR key is shared with pages whose fetcher returns the raw { records }
+  // envelope, so accept either shape rather than assuming an array.
+  const { data: raw, isLoading, error, mutate } = useSWR<CatchRecord[] | { records: CatchRecord[] }>("/api/v1/trace/history", fetchHistory, { refreshInterval: 15000 });
+  const records: CatchRecord[] = Array.isArray(raw) ? raw : (raw?.records ?? []);
 
   // Reference point = saved port (fallback Veraval), unless the fisher has
   // opted into real GPS (shared preference with Fisher View — no re-prompt).

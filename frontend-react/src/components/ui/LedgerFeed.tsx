@@ -31,13 +31,18 @@ const fetchHistory = (path: string) =>
  * reflects the actual SHA-256 hash chain instead of hardcoded placeholder rows.
  */
 export default function LedgerFeed({ limit = 4 }: { limit?: number }) {
-  const { data, isLoading } = useSWR<CatchRecord[]>(
+  const { data, isLoading } = useSWR<CatchRecord[] | { records: CatchRecord[] }>(
     "/api/v1/trace/history",
     fetchHistory,
     { refreshInterval: 10000 }
   );
 
-  const records = (data ?? [])
+  // Other pages share this SWR key with a fetcher that returns the raw
+  // { records } envelope rather than the unwrapped array. Whichever resolves
+  // last wins the cache, so tolerate both shapes instead of crashing.
+  const list: CatchRecord[] = Array.isArray(data) ? data : (data?.records ?? []);
+
+  const records = list
     .slice()
     .sort((a, b) => b.block_number - a.block_number)
     .slice(0, limit);

@@ -12,9 +12,14 @@ export const createClient = (request: NextRequest) => {
     },
   });
 
-  const supabase = createServerClient(
-    supabaseUrl!,
-    supabaseKey!,
+  // Auth is optional. Without Supabase credentials configured, pass the request
+  // straight through — otherwise createServerClient throws and, because the
+  // middleware matcher covers every path, that 500s the entire app.
+  if (!supabaseUrl || !supabaseKey) return supabaseResponse;
+
+  createServerClient(
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
