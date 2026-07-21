@@ -66,7 +66,7 @@ export default function Dashboard() {
 
   // Compute real average SST from nearest MHI grid cell data
   const avgSST = mhi?.grid_cells?.length
-    ? (mhi.grid_cells.reduce((s, c) => s + (c as unknown as Record<string, number>).sst_c ?? 28, 0) / mhi.grid_cells.length).toFixed(1)
+    ? (mhi.grid_cells.reduce((s, c) => s + ((c as unknown as Record<string, number>).sst_c ?? 28), 0) / mhi.grid_cells.length).toFixed(1)
     : null;
 
   // Dynamically find the best GREEN zone (lowest bycatch risk) for actionable recommendation
