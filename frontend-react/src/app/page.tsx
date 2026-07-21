@@ -218,9 +218,21 @@ export default function FisherView() {
   }, [port, geo?.lat, geo?.lon]);
 
   // Sunset + return-home time for the current position (shared helper above).
-  const sunsetTime = fmtClock(sunsetDate(loc.lat, loc.lon));
+  // Computed after mount only: these depend on the wall clock and the runtime
+  // locale, which differ between the server render and the browser and would
+  // otherwise cause a hydration text mismatch (React #418).
+  // The Date itself is only passed to TripPanel and read inside a click
+  // handler, never rendered as text — so it stays safe to compute here.
   const returnByDate = sunsetDate(loc.lat, loc.lon, -0.5); // 30-min safety buffer
-  const returnByTime = fmtClock(returnByDate);
+  const [sunTimes, setSunTimes] = useState<{ sunset: string; returnBy: string }>({ sunset: "—", returnBy: "—" });
+  useEffect(() => {
+    setSunTimes({
+      sunset: fmtClock(sunsetDate(loc.lat, loc.lon)),
+      returnBy: fmtClock(sunsetDate(loc.lat, loc.lon, -0.5)),
+    });
+  }, [loc.lat, loc.lon]);
+  const sunsetTime = sunTimes.sunset;
+  const returnByTime = sunTimes.returnBy;
 
 
   // Map points — only nearby. GREEN dots are tappable: tap one to navigate

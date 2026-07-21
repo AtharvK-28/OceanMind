@@ -30,7 +30,10 @@ export default function BlockchainPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [detected, setDetected] = useState<{ common: string; sci: string; aphia: number; confidence: number } | null>(null);
-  const base = typeof window !== "undefined" ? window.location.origin : "";
+  // Resolved after mount so server and first client render agree (avoids a
+  // hydration mismatch); an empty base still gives a valid relative link.
+  const [base, setBase] = useState("");
+  useEffect(() => setBase(window.location.origin), []);
 
   function handleCatchPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

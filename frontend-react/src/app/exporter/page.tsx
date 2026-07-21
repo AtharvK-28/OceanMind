@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import QRCode from "qrcode";
@@ -204,7 +205,11 @@ export default function ExporterConsolePreview() {
   const records = data?.records ?? [];
   const consignments = buildConsignments(records);
   const totalKg = records.reduce((s, r) => s + r.quantity_kg, 0);
-  const base = typeof window !== "undefined" ? window.location.origin : "";
+  // Resolved after mount so the server and first client render agree (an
+  // origin that appears only on the client causes a hydration mismatch).
+  // Empty base still yields a valid relative /trace?tx=… link.
+  const [base, setBase] = useState("");
+  useEffect(() => setBase(window.location.origin), []);
 
   return (
     <div className="animate-page-enter max-w-6xl">

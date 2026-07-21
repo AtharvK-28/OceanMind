@@ -1,14 +1,25 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import NavLink from "./NavLink";
 import SystemStatus from "./SystemStatus";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { usePersona } from "@/lib/persona";
+import { DEMO_ALERTS_KEY } from "@/components/ui/DemoAlerts";
 import { NAV_ITEMS } from "@/lib/constants";
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
+  // Read after mount so server and client first render agree.
+  const [alertsOn, setAlertsOn] = useState(true);
+  useEffect(() => { setAlertsOn(localStorage.getItem(DEMO_ALERTS_KEY) !== "off"); }, []);
+  function toggleAlerts() {
+    setAlertsOn((on) => {
+      const next = !on;
+      localStorage.setItem(DEMO_ALERTS_KEY, next ? "on" : "off");
+      return next;
+    });
+  }
   const { persona, setPersona } = usePersona();
   const fisherMode = persona === "fisher";
   const [showResearch, setShowResearch] = useState(false);
@@ -110,7 +121,16 @@ export default function Sidebar() {
             Viewing as {persona === "fisher" ? "Fisher" : "Researcher"} · Switch
           </button>
         )}
-        <div className="px-4 pt-3 flex justify-center">
+        <button
+          onClick={toggleAlerts}
+          title={alertsOn ? "Turn off the scripted demo notifications" : "Turn the demo notifications back on"}
+          className="mx-4 mt-2 flex items-center justify-center gap-1.5 text-[10.5px] text-[rgba(220,235,233,0.55)] hover:text-[#9fe0d6] transition-colors"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+        >
+          <i className={`ph ${alertsOn ? "ph-bell" : "ph-bell-slash"} text-[13px]`} />
+          Demo alerts {alertsOn ? "on" : "off"}
+        </button>
+        <div className="px-4 pt-2 flex justify-center">
           <LanguageToggle variant="dark" />
         </div>
         <div className="py-3">

@@ -24,6 +24,7 @@ const STEPS: { href: string; title: string; say: string }[] = [
 
 export default function GuidedTour() {
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [i, setI] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
@@ -35,20 +36,32 @@ export default function GuidedTour() {
     if (open) router.push(STEPS[i].href);
   }, [open, i, router]);
 
-  if (hidden) return null;
+  // Dismissal lasts for the session only — a refresh brings the pill back, so
+  // nobody can permanently lose the tour by mis-tapping the ✕.
+  if (hidden || dismissed) return null;
 
   const step = STEPS[i];
   const last = i === STEPS.length - 1;
 
   if (!open) {
     return (
-      <button
-        onClick={() => { setI(0); setOpen(true); }}
-        className="fixed bottom-5 left-4 lg:left-[266px] z-[55] inline-flex items-center gap-2 rounded-full bg-[#16434c] text-[#9fe0d6] border border-white/10 pl-3 pr-4 py-2 text-[12.5px] font-semibold shadow-lg hover:bg-[#1a4f59] transition-colors"
-        title="Walk through the demo in order"
-      >
-        <i className="ph-fill ph-play-circle text-[16px]" /> Guided tour
-      </button>
+      <div className="fixed bottom-5 left-4 lg:left-[266px] z-[55] inline-flex items-center rounded-full bg-[#16434c] text-[#9fe0d6] border border-white/10 shadow-lg overflow-hidden">
+        <button
+          onClick={() => { setI(0); setOpen(true); }}
+          className="inline-flex items-center gap-2 pl-3 pr-2.5 py-2 text-[12.5px] font-semibold hover:bg-white/[0.08] transition-colors"
+          title="Walk through the demo in order"
+        >
+          <i className="ph-fill ph-play-circle text-[16px]" /> Guided tour
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          aria-label="Hide the guided tour"
+          title="Hide until reload"
+          className="pl-1.5 pr-2.5 py-2 border-l border-white/10 text-[rgba(220,235,233,0.6)] hover:text-white hover:bg-white/[0.08] transition-colors"
+        >
+          <i className="ph ph-x text-[13px]" />
+        </button>
+      </div>
     );
   }
 

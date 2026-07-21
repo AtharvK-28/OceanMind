@@ -11,6 +11,11 @@ const DEMO_ALERTS = [
   { msg: "Fishing advisory: Calm seas off Mangalore · GO (score 82)", type: "success" as const, delay: 175000 },
 ];
 
+export const DEMO_ALERTS_KEY = "oceanmind_demo_alerts";
+/** Scripted demo alerts are on unless the user has switched them off. */
+export const demoAlertsEnabled = () =>
+  typeof window === "undefined" || localStorage.getItem(DEMO_ALERTS_KEY) !== "off";
+
 export default function DemoAlerts() {
   const { toast } = useToast();
   const fired = useRef(new Set<number>());
@@ -18,7 +23,9 @@ export default function DemoAlerts() {
   useEffect(() => {
     const timers = DEMO_ALERTS.map((alert, i) =>
       setTimeout(() => {
-        if (!fired.current.has(i)) {
+        // Checked at fire time, not schedule time, so muting takes effect
+        // immediately for every alert still pending.
+        if (!fired.current.has(i) && demoAlertsEnabled()) {
           fired.current.add(i);
           toast(alert.msg, alert.type);
         }

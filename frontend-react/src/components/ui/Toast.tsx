@@ -22,6 +22,10 @@ let toastId = 0;
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const dismiss = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const toast = useCallback((message: string, type: ToastType = "success") => {
     const id = ++toastId;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -50,7 +54,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                         flex items-center gap-2.5 max-w-sm`}
           >
             <span className="text-base">{icons[t.type]}</span>
-            {t.message}
+            <span className="flex-1">{t.message}</span>
+            <button
+              onClick={() => dismiss(t.id)}
+              aria-label="Dismiss notification"
+              className="flex-none -mr-1.5 opacity-50 hover:opacity-100 transition-opacity"
+            >
+              <i className="ph ph-x text-[13px]" />
+            </button>
           </div>
         ))}
       </div>
