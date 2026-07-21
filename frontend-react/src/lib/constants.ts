@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { label: "Ocean Footprint", href: "/footprint", icon: "ph ph-leaf", section: "fisher" },
   { label: "Dashboard", href: "/dashboard", icon: "ph ph-squares-four", section: "expert" },
   { label: "Impact", href: "/impact", icon: "ph ph-hand-heart", section: "expert" },
+  { label: "Data Trust", href: "/trust", icon: "ph ph-shield-check", section: "expert" },
   { label: "Marine Health Index", href: "/mhi", icon: "ph ph-heartbeat", section: "expert" },
   { label: "Fishing Zones", href: "/sfz", icon: "ph ph-map-trifold", section: "expert" },
   { label: "Migration Forecast", href: "/migration", icon: "ph ph-fish", section: "expert" },

@@ -7,6 +7,7 @@ import OfflineBanner from "@/components/pwa/OfflineBanner";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import SOSButton from "@/components/pwa/SOSButton";
 import PersonaGate from "@/components/ui/PersonaGate";
+import GuidedTour from "@/components/ui/GuidedTour";
 import { LangProvider } from "@/lib/i18n";
 import { PersonaProvider } from "@/lib/persona";
 import "./globals.css";
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <SOSButton />
               <InstallPrompt />
               <OfflineBanner />
+              <GuidedTour />
               <PersonaGate />
             </PersonaProvider>
           </LangProvider>
