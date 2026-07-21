@@ -1,6 +1,6 @@
 """
 OceanMind — RAG Conversational Interface (Phase E)
-LangChain + Groq (llama3-8b) + sentence-transformers + FAISS.
+LangChain + OpenRouter (llama-3.3-70b) + sentence-transformers + FAISS.
 Every answer carries provenance: source record IDs + quality flags.
 """
 import os
@@ -16,10 +16,6 @@ try:
     from langchain_openai import ChatOpenAI
 except ImportError:
     ChatOpenAI = None
-try:
-    from langchain_groq import ChatGroq
-except ImportError:
-    ChatGroq = None
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from loguru import logger
@@ -157,7 +153,7 @@ class OceanMindRAG:
 
     def __init__(self):
         self.vectorstore: Optional[FAISS] = None
-        self.llm: Optional[ChatGroq] = None
+        self.llm: Optional[ChatOpenAI] = None
         self._ready = False
         self._docs: list[Document] = []
 
@@ -211,11 +207,10 @@ class OceanMindRAG:
         return docs
 
     def initialise(self):
-        """Build FAISS index + initialise LLM (xAI Grok or Groq)."""
-        xai_key = os.getenv("XAI_API_KEY", "")
-        groq_key = os.getenv("GROQ_API_KEY", "")
-        if not xai_key and not groq_key:
-            logger.warning("No LLM API key set — RAG will use fallback mode.")
+        """Build FAISS index + initialise LLM (OpenRouter)."""
+        openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+        if not openrouter_key:
+            logger.warning("No OPENROUTER_API_KEY set — RAG will use fallback mode.")
 
         logger.info("Initialising RAG pipeline (sentence-transformers CPU mode)...")
 
@@ -257,26 +252,22 @@ class OceanMindRAG:
             os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
             self.vectorstore.save_local(FAISS_INDEX_PATH)
 
-        # LLM: prefer xAI Grok, fall back to Groq, then fallback mode
-        if xai_key and ChatOpenAI:
+        # LLM: OpenRouter (OpenAI-compatible API, wide model selection)
+        if openrouter_key and ChatOpenAI:
+            model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
             self.llm = ChatOpenAI(
-                model="grok-3-mini",
-                api_key=xai_key,
-                base_url="https://api.x.ai/v1",
+                model=model,
+                api_key=openrouter_key,
+                base_url="https://openrouter.ai/api/v1",
                 temperature=0.1,
                 max_tokens=512,
+                default_headers={
+                    "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:3000"),
+                    "X-Title": os.getenv("OPENROUTER_SITE_NAME", "OceanMind"),
+                },
             )
-            self._llm_name = "grok-3-mini (xAI)"
-            logger.info("LLM: xAI Grok connected.")
-        elif groq_key and ChatGroq:
-            self.llm = ChatGroq(
-                model="llama-3.3-70b-versatile",
-                api_key=groq_key,
-                temperature=0.1,
-                max_tokens=512,
-            )
-            self._llm_name = "llama-3.3-70b-versatile (Groq)"
-            logger.info("LLM: Groq connected.")
+            self._llm_name = f"{model} (OpenRouter)"
+            logger.info(f"LLM: OpenRouter connected — model: {model}")
         else:
             self.llm = None
             self._llm_name = "fallback"

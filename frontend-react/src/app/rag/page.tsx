@@ -41,7 +41,7 @@ export default function RAGPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Ask OceanMind"
-        description="Ask natural language questions about ocean conditions, fishing zones, marine health, or species data. Powered by <b>LangChain + Llama-3 + FAISS</b> with full <b>provenance tracing</b>."
+        description={'Ask anything — "is it safe to fish off Kochi tomorrow?" — and get a sourced answer, not a guess. <span style="opacity:.6">LangChain + Llama-3 + FAISS, fully provenance-traced</span>'}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">

@@ -132,8 +132,15 @@ class SFZClassifier:
         )
         self.model.fit(X, y, verbose=False)
 
-        # SHAP explainer
-        self.explainer = shap.TreeExplainer(self.model)
+        # SHAP explainer — XGBoost ≥2.0 multi-class stores base_score as a
+        # float vector which shap.TreeExplainer can't parse; fall back to the
+        # model-agnostic Explainer with a background sample in that case.
+        try:
+            self.explainer = shap.TreeExplainer(self.model)
+        except (ValueError, TypeError) as exc:
+            logger.warning(f"TreeExplainer failed ({exc}); using shap.Explainer with background sample.")
+            background = shap.sample(X, min(100, len(X)))
+            self.explainer = shap.Explainer(self.model.predict_proba, background)
         self._trained = True
 
         os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
@@ -173,18 +180,23 @@ class SFZClassifier:
         preds = self.model.predict(X)
         probs = self.model.predict_proba(X)
 
-        # SHAP values — shap>=0.45 returns shape (samples, features, classes)
-        # older versions return list[class] of (samples, features)
-        shap_values = self.explainer.shap_values(X)
+        # SHAP values — handle TreeExplainer (.shap_values) and generic
+        # shap.Explainer (__call__ returns shap.Explanation with .values)
+        if hasattr(self.explainer, "shap_values"):
+            shap_values = self.explainer.shap_values(X)
+        else:
+            explanation = self.explainer(X)
+            shap_values = explanation.values  # shape: (n_samples, n_features, n_classes)
         results = []
         for i, (pred, prob) in enumerate(zip(preds, probs)):
             class_name = self.label_encoder.inverse_transform([pred])[0]
-            # Handle both shap output shapes
+            # Handle all shap output shapes:
+            # 3-D ndarray  (n_samples, n_features, n_classes)  — new TreeExplainer + generic
+            # list         [class][n_samples, n_features]       — old TreeExplainer
+            # 2-D ndarray  (n_samples, n_features)             — binary fallback
             if isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
-                # New shape: (n_samples, n_features, n_classes)
                 shap_for_class = shap_values[i, :, int(pred)]
             elif isinstance(shap_values, list):
-                # Old shape: list of (n_samples, n_features)
                 shap_for_class = shap_values[int(pred)][i]
             else:
                 shap_for_class = shap_values[i]

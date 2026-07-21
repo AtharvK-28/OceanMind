@@ -479,11 +479,11 @@ Permanent constraints — not re-openable. See PRD §8 for full rationale.
 
 | ID | Item | Owner | Status |
 |---|---|---|---|
-| OQ-025 | Landing-site CV pilot — initiate INCOIS conversation for Veraval pilot (mackerel + sardine, Oct–Dec). Pilot spec fully defined in Ideation v7.0 §12. | Atharv | **Open — human action required** |
-| OQ-018 Track B | CMFRI/CMLRE MOU for novel genomic/transcriptomic data generation (Phase 3 readiness). Begin MOU discussion in Phase 2. | Adi | **Open — human action required** |
-| Section 18.2 | Paste exact official Biothon 2026 Environment & Biodiversity problem statement for word-for-word alignment verification. | Both | **Open — human action required** |
-| OQ-031 | MFC 2025 preliminary data release (Q3 2026) — check data.gov.in monthly from Aug 2026. | Atharv | **Monitor** |
-| ReALCraft attribution | Verify vessel registry portal authority — DGTR (Directorate General of Trade Remedies) handles anti-dumping, not vessel registration. Likely DoF (Department of Fisheries) or NFDB. Confirm URL and update TRD §2.2 and IMPL §2.2. | Adi | **Verify before Phase A AIS pipeline** |
+| OQ-025 | Landing-site CV pilot — initiate INCOIS conversation for Veraval pilot (mackerel + sardine, Oct–Dec). Pilot spec fully defined in Ideation v7.0 §12. | Atharv | **Awaiting Human Execution** (Post-Hackathon Phase) |
+| OQ-018 Track B | CMFRI/CMLRE MOU for novel genomic/transcriptomic data generation (Phase 3 readiness). Begin MOU discussion in Phase 2. | Adi | **Awaiting Human Execution** (Post-Hackathon Phase) |
+| Section 18.2 | Paste exact official Biothon 2026 Environment & Biodiversity problem statement for word-for-word alignment verification. | Both | **Awaiting Human Execution** (Post-Hackathon Phase) |
+| OQ-031 | MFC 2025 preliminary data release (Q3 2026) — check data.gov.in monthly from Aug 2026. | Atharv | **Awaiting Human Execution** (Monitor) |
+| ReALCraft attribution | Verify vessel registry portal authority — DGTR (Directorate General of Trade Remedies) handles anti-dumping, not vessel registration. Likely DoF (Department of Fisheries) or NFDB. Confirm URL and update TRD §2.2 and IMPL §2.2. | Adi | **Awaiting Human Execution** (Before Phase A AIS pipeline) |
 | ~~IOTC licensing~~ | ~~Verify IOTC open-access terms before ConvLSTM training.~~ | — | **✅ CLOSED** — OQ-033 resolved in Ideation v7.0. IOTC data freely downloadable at iotc.org/data/datasets; no registration required; confirmed compliant with open-data principle. |
 | ~~Phase H mock vs. Fabric~~ | ~~Mock hash chain vs. real Hyperledger Fabric for MVP?~~ | — | **✅ CLOSED** — Decision committed in §3 Phase H and TRD §5.5: Phase H MVP = mock in-memory hash chain. Hyperledger Fabric 2.5 = Phase 2. |
 
