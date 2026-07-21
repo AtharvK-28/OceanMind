@@ -531,8 +531,18 @@ async def lifespan(app: FastAPI):
             logger.info("Training SFZ model from synthetic data...")
             sfz_model.train(_synthetic_sfz_data(n=3000))
 
-    # Initialise RAG (lazy — first query triggers embedding build)
-    logger.info("RAG pipeline will initialise on first query.")
+    # Warm the RAG pipeline in the background. Building the FAISS index takes
+    # ~14s; doing it lazily meant whoever asked the first question waited it
+    # out. Run it in a thread so startup and request serving aren't blocked.
+    async def _warm_rag():
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, rag_pipeline.initialise)
+            logger.success(f"RAG warmed — LLM: {getattr(rag_pipeline, '_llm_name', 'fallback')}")
+        except Exception as e:
+            logger.warning(f"RAG warm-up failed, will retry on first query: {e}")
+
+    rag_warm_task = asyncio.create_task(_warm_rag())
 
     _seed_demo_catches()
 
@@ -540,6 +550,7 @@ async def lifespan(app: FastAPI):
 
     logger.success("OceanMind backend ready.")
     yield
+    rag_warm_task.cancel()
     incois_refresh_task.cancel()
     logger.info("OceanMind backend shutting down.")
 
