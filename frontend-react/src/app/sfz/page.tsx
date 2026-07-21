@@ -11,6 +11,27 @@ import ResultBadge from "@/components/ui/ResultBadge";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import type { SFZCurrentResponse, SFZClassifyResponse, SHAPEntry } from "@/types/api";
+import InsightCard from "@/components/ui/InsightCard";
+import AdvancedPanel from "@/components/ui/AdvancedPanel";
+
+function interpretSFZ(green: number, amber: number, red: number, total: number): { severity: "good"|"watch"|"warning"|"critical"; headline: string; body: string } {
+  const greenPct = total ? Math.round((green / total) * 100) : 0;
+  if (greenPct >= 60) return {
+    severity: "good",
+    headline: `${greenPct}% of monitored zones are green this week — good conditions across most of the coast.`,
+    body: "Sardine and mackerel grounds are holding up well. Tap the map for the closest recommended zone to your port.",
+  };
+  if (greenPct >= 35) return {
+    severity: "watch",
+    headline: `${greenPct}% of zones are green — a mixed week, worth checking your specific stretch of coast.`,
+    body: `${amber} zones are caution-rated and ${red} are flagged to avoid — mostly driven by bycatch risk or shifting sea surface temperature.`,
+  };
+  return {
+    severity: "warning",
+    headline: `Only ${greenPct}% of zones are green this week — conditions are tighter than usual.`,
+    body: `${red} zones are currently flagged red. Consider the Digital Twin tool to see whether this is a short-term dip or a longer trend.`,
+  };
+}
 
 export default function SFZPage() {
   const { data, isLoading } = useSWR<SFZCurrentResponse>("/api/v1/sfz/current", fetcher);
@@ -53,14 +74,18 @@ export default function SFZPage() {
     } finally { setClassifying(false); }
   }
 
+  const insight = interpretSFZ(summary.GREEN ?? 0, summary.AMBER ?? 0, summary.RED ?? 0, data?.total_zones ?? 0);
+
   return (
-    <div className="animate-page-enter">
+    <div className="animate-page-enter space-y-6 mb-12">
       <HeroBanner
         title="Sustainable Fishing Zones"
-        description="<b>XGBoost</b> weekly classifier with <b>SHAP</b> explainability. Green = recommended · Amber = caution · Red = avoid."
+        description={'Where is it safe and sustainable to fish this week? Green = go, amber = caution, red = avoid. <span style="opacity:.6">XGBoost weekly classifier, SHAP-explained</span>'}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <InsightCard severity={insight.severity} headline={insight.headline} body={insight.body} />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard label="GREEN" value={summary.GREEN ?? 0} />
         <MetricCard label="AMBER" value={summary.AMBER ?? 0} />
         <MetricCard label="RED" value={summary.RED ?? 0} />
@@ -78,10 +103,9 @@ export default function SFZPage() {
         </div>
       )}
 
-      {/* SHAP chart */}
+      {/* Advanced Tools */}
       {shapData.length > 0 && (
-        <div className="mt-6 bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
-          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3">SHAP Feature Importance</h3>
+        <AdvancedPanel title="What's driving these classifications (SHAP)">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={shapData} layout="vertical">
               <XAxis type="number" tick={{ fill: "#8a9698", fontSize: 11 }} />
@@ -90,12 +114,10 @@ export default function SFZPage() {
               <Bar dataKey="count" fill="#26a69a" radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </AdvancedPanel>
       )}
 
-      {/* Single classify */}
-      <div className="mt-6 bg-white border border-card-border rounded-2xl p-6" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
-        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Classify a Single Location</h3>
+      <AdvancedPanel title="Model playground — classify a custom point">
         <form onSubmit={handleClassify} className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(form).map(([key, val]) => (
             <label key={key} className="block">
@@ -117,7 +139,7 @@ export default function SFZPage() {
             <span className="text-text-faint">Top: {result.shap_top3.map((s) => s.feature).join(", ")}</span>
           </div>
         )}
-      </div>
+      </AdvancedPanel>
     </div>
   );
 }
