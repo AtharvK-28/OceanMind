@@ -11,6 +11,32 @@ import ResultBadge from "@/components/ui/ResultBadge";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import type { MHIStatusResponse, MHIScoreResponse } from "@/types/api";
+import InsightCard from "@/components/ui/InsightCard";
+import AdvancedPanel from "@/components/ui/AdvancedPanel";
+
+function interpretMHI(alertsActive: number, totalCells: number): { severity: "good"|"watch"|"warning"|"critical"; headline: string; body: string } {
+  const pct = totalCells ? (alertsActive / totalCells) * 100 : 0;
+  if (pct === 0) return {
+    severity: "good",
+    headline: "Marine health is stable across the monitored EEZ.",
+    body: "No grid cells are currently flagged for stress. SST, oxygen, and chlorophyll readings from ARGO floats are within normal seasonal range.",
+  };
+  if (pct < 5) return {
+    severity: "watch",
+    headline: `A small number of zones (${alertsActive} of ${totalCells}) are showing early stress signals.`,
+    body: "Likely localized — worth a second look next week, not yet a systemic concern.",
+  };
+  if (pct < 15) return {
+    severity: "warning",
+    headline: `${alertsActive} of ${totalCells} monitored zones are under active stress.`,
+    body: "This is enough to affect fish distribution in the coming weeks — check the map below for which coastal stretch is affected.",
+  };
+  return {
+    severity: "critical",
+    headline: `Widespread marine stress detected — ${alertsActive} of ${totalCells} zones flagged.`,
+    body: "This pattern is consistent with a marine heatwave or oxygen-minimum-zone expansion. Recommend cross-checking against the Digital Twin scenario tool.",
+  };
+}
 
 export default function MHIPage() {
   const [bbox, setBbox] = useState({ lat_min: "5", lat_max: "25", lon_min: "60", lon_max: "100" });
@@ -43,29 +69,19 @@ export default function MHIPage() {
     finally { setScoring(false); }
   }
 
+  const insight = interpretMHI(data?.alerts_active ?? 0, data?.total_cells ?? 0);
+
   return (
-    <div className="animate-page-enter">
+    <div className="animate-page-enter space-y-6 mb-12">
       <HeroBanner
         title="Marine Health Index"
-        description="<b>Isolation Forest</b> anomaly detection across SST, Chlorophyll-a, Dissolved Oxygen, pH, and Salinity. Score 0–100 (lower = more stressed). Data from <b>real ARGO GDAC float profiles</b>."
+        description={'How stressed is the ocean right now? A 0–100 health score for every monitored zone in the Indian EEZ, built from real ARGO float readings. <span style="opacity:.6">Isolation Forest anomaly detection · SST · Chl-a · DO · pH · Salinity</span>'}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Controls */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">Bounding Box</h3>
-          {(["lat_min", "lat_max", "lon_min", "lon_max"] as const).map((key) => (
-            <label key={key} className="block">
-              <span className="text-xs text-text-muted">{key.replace("_", " ").toUpperCase()}</span>
-              <input type="number" value={bbox[key]} onChange={(e) => setBbox({ ...bbox, [key]: e.target.value })}
-                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
-            </label>
-          ))}
-        </div>
+      <InsightCard severity={insight.severity} headline={insight.headline} body={insight.body} />
 
-        {/* Map + charts */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <MetricCard label="Grid Cells" value={data?.total_cells ?? 0} icon="ph ph-grid-four" />
             <MetricCard label="Alerts Active" value={data?.alerts_active ?? 0} icon="ph ph-warning" deltaColor="red" delta={`${data?.alerts_active ?? 0} cells stressed`} />
             <MetricCard label="Model" value="IsoForest" icon="ph ph-brain" />
@@ -127,13 +143,24 @@ export default function MHIPage() {
               <span className="font-semibold text-[#3a8c5f]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Indian EEZ</span>
             </div>
           </div>
-        </div>
       </div>
 
-      {/* Single-point scorer */}
-      <div className="mt-8 bg-white border border-card-border rounded-2xl p-6" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
-        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Single-Point MHI Score</h3>
-        <form onSubmit={handleScore} className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {/* Advanced Tools */}
+      <div className="space-y-6">
+        <AdvancedPanel title="Change region">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {(["lat_min", "lat_max", "lon_min", "lon_max"] as const).map((key) => (
+              <label key={key} className="block">
+                <span className="text-xs text-text-muted">{key.replace("_", " ").toUpperCase()}</span>
+                <input type="number" value={bbox[key]} onChange={(e) => setBbox({ ...bbox, [key]: e.target.value })}
+                  className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2 text-sm text-text" />
+              </label>
+            ))}
+          </div>
+        </AdvancedPanel>
+
+        <AdvancedPanel title="Model playground — score a custom location">
+          <form onSubmit={handleScore} className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {Object.entries(form).map(([key, val]) => (
             <label key={key} className="block">
               <span className="text-xs text-text-muted">{key.replace("_", " ")}</span>
@@ -155,6 +182,7 @@ export default function MHIPage() {
             {score.alert && <span className="text-[#c25a44] font-medium"><i className="ph ph-warning mr-1" />Alert</span>}
           </div>
         )}
+        </AdvancedPanel>
       </div>
     </div>
   );
