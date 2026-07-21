@@ -54,7 +54,7 @@ export default function VoicePage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Bhashini Voice Interface"
-        description="<b>Phase F:</b> Ask OceanMind questions in <b>Hindi</b> or <b>Tamil</b> using voice or text. Pipeline: Bhashini ASR (STT) → RAG → Bhashini TTS."
+        description="Ask OceanMind questions in <b>Hindi</b> or <b>Tamil</b> using voice or text. Pipeline: Bhashini ASR (STT) → RAG → Bhashini TTS."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
@@ -105,7 +105,7 @@ export default function VoicePage() {
               </div>
               <div className="text-[12px] text-text-muted mt-1">Bhashini · {langLabel}</div>
               <p className="text-[11px] text-text-faint mt-4 text-center max-w-xs">
-                MVP: Simulates voice input. Production: live Bhashini ASR transcription → RAG → TTS playback.
+                Simulates voice input. Production: live Bhashini ASR transcription → RAG → TTS playback.
               </p>
             </div>
           )}

@@ -16,8 +16,8 @@ export default function MetricCard({ label, value, delta, deltaColor = "green", 
         <span className="text-[9.5px] tracking-[0.11em] uppercase text-[#8a9698]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{label}</span>
         {icon && <span className="w-[30px] h-[30px] rounded-[9px] flex items-center justify-center bg-[#eaf3ef] text-[#2f6f4c]"><i className={icon} style={{ fontSize: 16 }} /></span>}
       </div>
-      <div className="flex items-baseline gap-1 mt-3">
-        <span className="text-[34px] font-semibold leading-none text-[#16323a] animate-number" style={{ fontFamily: "'Newsreader', serif" }}>{value}</span>
+      <div className="flex items-baseline gap-1 mt-3 min-w-0 w-full">
+        <span className="text-[22px] font-semibold leading-tight text-[#16323a] animate-number truncate" style={{ fontFamily: "'Newsreader', serif" }}>{value}</span>
       </div>
       {delta && (
         <div className="flex items-center gap-[6px] mt-[10px]">

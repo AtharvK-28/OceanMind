@@ -67,7 +67,7 @@ export default function BiodiversityPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Biodiversity & Computer Vision"
-        description="<b>Phase B:</b> YOLOv8 landing-site fish detection + ResNet50 species classifier (13 Indian species). eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution."
+        description="YOLOv8 landing-site fish detection + ResNet50 species classifier (13 Indian species). eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution."
       />
 
       <TabGroup tabs={[

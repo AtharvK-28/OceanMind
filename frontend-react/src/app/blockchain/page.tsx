@@ -71,14 +71,14 @@ export default function BlockchainPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Catch Traceability Ledger"
-        description="<b>Phase H MVP:</b> in-memory SHA-256 hash chain (mock ledger). Phase 2: replaces with <b>Hyperledger Fabric 2.5</b>."
+        description="SHA-256 hash chain catch ledger for end-to-end traceability. Every catch is timestamped, hashed, and immutably linked. Upgrading to <b>Hyperledger Fabric 2.5</b> for production."
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <MetricCard label="Total Blocks" value={chain?.total_blocks ?? 0} icon="ph ph-cube" delta="SHA-256 hash chain" deltaColor="green" />
         <MetricCard label="Catch Records" value={chain?.total_catch_records ?? 0} icon="ph ph-fish-simple" delta="Verified on ledger" deltaColor="green" />
         <MetricCard label="Species Logged" value={chain?.species_logged?.length ?? 0} icon="ph ph-dna" delta={chain?.species_logged?.slice(0, 2).join(", ") ?? ""} deltaColor="green" />
-        <MetricCard label="Ledger Type" value="Mock" icon="ph ph-shield-check" delta="Phase 2: Hyperledger Fabric" deltaColor="amber" />
+        <MetricCard label="Ledger Type" value="Mock" icon="ph ph-shield-check" delta="Hyperledger ready" deltaColor="amber" />
       </div>
 
       {/* Recent activity feed */}

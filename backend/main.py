@@ -1602,96 +1602,86 @@ _SPECIES_THERMAL_RESPONSE = {
 
 def _mhi_projection(sst_delta: float, duration_weeks: int,
                     lats, lons, rng: np.random.Generator) -> list:
-    """Project MHI scores under SST perturbation using regional climatology baselines."""
+    """Project MHI scores under SST perturbation using regional climatology baselines.
+    Iterates over (lat, lon) fishing-ground PAIRS — not a cartesian grid.
+    """
     month = datetime.now().month
     points = []
-    for lat in lats:
-        for lon in lons:
-            if not _is_ocean(lat, lon):
-                continue
-            zone = _eez_zone(lat, lon)
-            c = _CLIMATOLOGY[zone]
-            vuln = _THERMAL_VULNERABILITY[zone]
+    for lat, lon in zip(lats, lons):   # ← pairs, not nested loop
+        zone = _eez_zone(lat, lon)
+        c = _CLIMATOLOGY[zone]
+        vuln = _THERMAL_VULNERABILITY[zone]
 
-            # Baseline MHI from regional climatology
-            seasonal = c["sst_seasonal_amp"] * np.sin((month - 3) * np.pi / 6)
-            baseline_sst = c["sst_base"] + seasonal
-            baseline_chl = c["chl_mean"]
-            baseline_do = c["do_mean"]
-            # MHI baseline: higher when SST optimal (26-29°C), good DO, reasonable chl
-            sst_penalty = max(0, abs(baseline_sst - 27.5) - 1.5) * 5
-            do_penalty = max(0, (180 - baseline_do)) * 0.2
-            chl_bonus = min(10, baseline_chl * 8)
-            baseline = float(np.clip(70 - sst_penalty - do_penalty + chl_bonus + rng.normal(0, 3), 20, 95))
+        # Baseline MHI from regional climatology
+        seasonal = c["sst_seasonal_amp"] * np.sin((month - 3) * np.pi / 6)
+        baseline_sst = c["sst_base"] + seasonal
+        baseline_chl = c["chl_mean"]
+        baseline_do = c["do_mean"]
+        sst_penalty = max(0, abs(baseline_sst - 27.5) - 1.5) * 5
+        do_penalty = max(0, (180 - baseline_do)) * 0.2
+        chl_bonus = min(10, baseline_chl * 8)
+        baseline = float(np.clip(70 - sst_penalty - do_penalty + chl_bonus + rng.normal(0, 3), 20, 95))
 
-            # Thermal stress: vulnerability × intensity × sqrt(duration)
-            stress = vuln * abs(sst_delta) * 4.0 * np.sqrt(duration_weeks / 4)
-            if sst_delta < 0:
-                stress *= 0.4  # cooling is less harmful than warming
+        # Thermal stress
+        stress = vuln * abs(sst_delta) * 4.0 * np.sqrt(duration_weeks / 4)
+        if sst_delta < 0:
+            stress *= 0.4
+        if baseline_do < 185 and sst_delta > 0:
+            stress *= 1.3
 
-            # Compound stress: warming + low DO zones get extra hit (Arabian Sea OMZ)
-            if baseline_do < 185 and sst_delta > 0:
-                stress *= 1.3  # DO-temperature synergy (Breitburg et al. 2018)
+        projected = float(np.clip(baseline - stress + rng.normal(0, 2), 0, 100))
+        delta = round(projected - baseline, 1)
 
-            projected = float(np.clip(baseline - stress + rng.normal(0, 2), 0, 100))
-            delta = round(projected - baseline, 1)
-
-            points.append({
-                "lat": float(lat), "lon": float(lon),
-                "zone": zone,
-                "baseline_mhi": round(baseline, 1),
-                "projected_mhi": round(projected, 1),
-                "delta_mhi": delta,
-                "vulnerability": round(vuln, 2),
-                "alert_level": (
-                    "CRITICAL" if projected < 25 else
-                    "WARNING"  if projected < 50 else
-                    "WATCH"    if projected < 65 else "NORMAL"
-                ),
-            })
+        points.append({
+            "lat": float(lat), "lon": float(lon),
+            "zone": zone,
+            "baseline_mhi": round(baseline, 1),
+            "projected_mhi": round(projected, 1),
+            "delta_mhi": delta,
+            "vulnerability": round(vuln, 2),
+            "alert_level": (
+                "CRITICAL" if projected < 25 else
+                "WARNING"  if projected < 50 else
+                "WATCH"    if projected < 65 else "NORMAL"
+            ),
+        })
     return points
 
 
 def _migration_shift(sst_delta: float, duration_weeks: int,
                      lats, lons, rng: np.random.Generator) -> list:
-    """Project migration zone shift using regional fish probability + poleward shift model."""
+    """Project migration zone shift using regional fish probability + poleward shift model.
+    Iterates over (lat, lon) fishing-ground PAIRS — not a cartesian grid.
+    """
     month = datetime.now().month
     features = []
-    for lat in lats:
-        for lon in lons:
-            if not _is_ocean(lat, lon):
-                continue
-            zone = _eez_zone(lat, lon)
-            c = _CLIMATOLOGY[zone]
+    for lat, lon in zip(lats, lons):   # ← pairs, not nested loop
+        zone = _eez_zone(lat, lon)
+        c = _CLIMATOLOGY[zone]
 
-            # Baseline probability from regional climatology
-            coastal_boost = 0.12 * np.exp(-min(abs(lon - 72), abs(lon - 80), abs(lon - 92)) / 5)
-            seasonal_mod = 0.08 * np.sin((month - 10) * np.pi / 6)
-            base_prob = c["fish_prob_base"] + coastal_boost + seasonal_mod
+        coastal_boost = 0.12 * np.exp(-min(abs(lon - 72), abs(lon - 80), abs(lon - 92)) / 5)
+        seasonal_mod = 0.08 * np.sin((month - 10) * np.pi / 6)
+        base_prob = c["fish_prob_base"] + coastal_boost + seasonal_mod
 
-            # Poleward shift: ~0.4° lat per °C (Cheung et al. 2013 global average)
-            # But duration matters: short MHW = temporary displacement, long = permanent shift
-            duration_factor = min(1.0, duration_weeks / 12)
-            lat_shift = sst_delta * 0.4 * duration_factor
+        duration_factor = min(1.0, duration_weeks / 12)
+        lat_shift = sst_delta * 0.4 * duration_factor
 
-            # Project: probability decreases in warming zone, increases poleward
-            shifted_lat = lat + lat_shift
-            shift_effect = -0.08 * sst_delta * duration_factor  # net loss in current cell
-            depth_refuge = 0.03 if lon < 72 or lon > 90 else 0  # deep shelf = some refuge
+        shift_effect = -0.08 * sst_delta * duration_factor
+        depth_refuge = 0.03 if lon < 72 or lon > 90 else 0
 
-            projected_prob = float(np.clip(
-                base_prob + shift_effect + depth_refuge + rng.normal(0, 0.04),
-                0.01, 0.95
-            ))
+        projected_prob = float(np.clip(
+            base_prob + shift_effect + depth_refuge + rng.normal(0, 0.04),
+            0.01, 0.95
+        ))
 
-            features.append({
-                "lat": float(lat), "lon": float(lon),
-                "zone": zone,
-                "baseline_prob": round(float(base_prob), 3),
-                "projected_prob": round(projected_prob, 3),
-                "delta_prob": round(projected_prob - float(base_prob), 3),
-                "poleward_shift_deg": round(lat_shift, 2),
-            })
+        features.append({
+            "lat": float(lat), "lon": float(lon),
+            "zone": zone,
+            "baseline_prob": round(float(base_prob), 3),
+            "projected_prob": round(projected_prob, 3),
+            "delta_prob": round(projected_prob - float(base_prob), 3),
+            "poleward_shift_deg": round(lat_shift, 2),
+        })
     return features
 
 
@@ -1740,7 +1730,7 @@ async def run_scenario(req: ScenarioRequest):
     Reference: Aguzzi et al. 2025 — Digital twins for ocean observation (Nature Reviews).
     """
     rng = np.random.default_rng(seed=42)
-    shelf = _SHELF_GRID[::2]  # every 2nd point for speed
+    shelf = _SHELF_GRID  # all fishing-ground points (no subsampling needed since it's already sparse)
     lats = np.array([p[0] for p in shelf])
     lons = np.array([p[1] for p in shelf])
 

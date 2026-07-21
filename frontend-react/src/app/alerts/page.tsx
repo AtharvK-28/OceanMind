@@ -39,7 +39,7 @@ export default function AlertsPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Alerts & Subscriptions"
-        description="<b>Phase F:</b> Zone-change SMS (Twilio) + Firebase FCM push. Bhashini voice alerts in <b>Hindi + Tamil</b>. &lt; 60s delivery SLA."
+        description="Zone-change SMS (Twilio) + Firebase FCM push. Bhashini voice alerts in <b>Hindi + Tamil</b>. &lt; 60s delivery SLA."
       />
 
       {/* Stats row */}
@@ -237,7 +237,7 @@ export default function AlertsPage() {
               {[
                 { label: "SMS delivery", target: "< 60s", status: "met", pct: 92 },
                 { label: "Push notification", target: "< 10s", status: "met", pct: 98 },
-                { label: "Voice synthesis", target: "< 30s", status: "phase 2", pct: 0 },
+                { label: "Voice synthesis", target: "< 30s", status: "coming soon", pct: 0 },
               ].map((s) => (
                 <div key={s.label} className="py-3 border-t border-[#f0ebdf] first:border-0">
                   <div className="flex justify-between text-[12.5px] mb-2">
