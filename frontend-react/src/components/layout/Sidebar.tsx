@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import NavLink from "./NavLink";
 import SystemStatus from "./SystemStatus";
 import LanguageToggle from "@/components/ui/LanguageToggle";
+import InstallButton from "@/components/pwa/InstallButton";
 import { usePersona } from "@/lib/persona";
 import { DEMO_ALERTS_KEY } from "@/components/ui/DemoAlerts";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -45,7 +46,8 @@ export default function Sidebar() {
         </button>
         <i className="ph ph-wave-sine text-xl text-[#9fe0d6]" />
         <span className="text-sm font-semibold text-[#f3f8f6] min-w-0 truncate">{currentPage?.label ?? "OceanMind"}</span>
-        <div className="ml-auto flex-none">
+        <div className="ml-auto flex-none flex items-center gap-2">
+          <InstallButton />
           <LanguageToggle variant="dark" />
         </div>
       </div>
@@ -121,6 +123,7 @@ export default function Sidebar() {
             Viewing as {persona === "fisher" ? "Fisher" : "Researcher"} · Switch
           </button>
         )}
+        <InstallButton variant="sidebar" />
         <button
           onClick={toggleAlerts}
           title={alertsOn ? "Turn off the scripted demo notifications" : "Turn the demo notifications back on"}

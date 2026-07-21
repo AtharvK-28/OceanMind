@@ -2,23 +2,10 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { usePersona } from "@/lib/persona";
-
-// Chrome's install event isn't in the standard DOM typings.
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { useInstall } from "@/lib/install";
 
 const DISMISS_KEY = "oceanmind_install_dismissed";
 const DISMISS_DAYS = 7;
-
-function isStandalone() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS Safari's non-standard flag when launched from the home screen
-    (navigator as unknown as { standalone?: boolean }).standalone === true
-  );
-}
 
 function recentlyDismissed() {
   const ts = Number(localStorage.getItem(DISMISS_KEY) || 0);
@@ -28,37 +15,18 @@ function recentlyDismissed() {
 export default function InstallPrompt() {
   const { t } = useI18n();
   const { persona, ready } = usePersona();
-  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showIosHint, setShowIosHint] = useState(false);
+  // The deferred event now lives in InstallProvider, so dismissing this banner
+  // no longer discards it — the always-on InstallButton can still trigger it.
+  const { canInstall, isIos, installed, promptInstall } = useInstall();
   const [dismissed, setDismissed] = useState(false);
+  const [snoozed, setSnoozed] = useState(true);
 
-  useEffect(() => {
-    if (isStandalone() || recentlyDismissed()) return;
-
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallEvent(e as BeforeInstallPromptEvent);
-    };
-    const onInstalled = () => {
-      setInstallEvent(null);
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
-
-    // iOS never fires beforeinstallprompt — show manual instructions instead.
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    if (isIos) setShowIosHint(true);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
-  }, []);
+  // Read the snooze after mount to keep server and client render in agreement.
+  useEffect(() => { setSnoozed(recentlyDismissed()); }, []);
 
   // Wait for the persona gate so the nudge never covers the first-run chooser.
-  if (!ready || persona === null || dismissed) return null;
-  if (!installEvent && !showIosHint) return null;
+  if (!ready || persona === null || dismissed || snoozed || installed) return null;
+  if (!canInstall && !isIos) return null;
 
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
@@ -66,11 +34,7 @@ export default function InstallPrompt() {
   };
 
   const install = async () => {
-    if (!installEvent) return;
-    await installEvent.prompt();
-    await installEvent.userChoice;
-    // Either way the browser won't allow re-prompting this event again.
-    setInstallEvent(null);
+    await promptInstall();
     dismiss();
   };
 
@@ -83,10 +47,10 @@ export default function InstallPrompt() {
       <div className="min-w-0">
         <p className="text-sm font-semibold leading-snug">{t("pwa.installTitle")}</p>
         <p className="text-xs opacity-85 mt-0.5 leading-snug">
-          {installEvent ? t("pwa.installDesc") : t("pwa.iosHint")}
+          {canInstall ? t("pwa.installDesc") : t("pwa.iosHint")}
         </p>
         <div className="flex gap-2 mt-2.5">
-          {installEvent && (
+          {canInstall && (
             <button
               onClick={install}
               className="text-xs font-semibold bg-[#e0a94f] text-[#16323a] rounded-md px-3 py-1.5 hover:brightness-105 active:scale-95 transition"

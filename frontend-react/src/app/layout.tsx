@@ -10,6 +10,7 @@ import PersonaGate from "@/components/ui/PersonaGate";
 import GuidedTour from "@/components/ui/GuidedTour";
 import { LangProvider } from "@/lib/i18n";
 import { PersonaProvider } from "@/lib/persona";
+import { InstallProvider } from "@/lib/install";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToastProvider>
           <LangProvider>
             <PersonaProvider>
+              <InstallProvider>
               <ServiceWorkerRegister />
               <DemoAlerts />
               <Sidebar />
@@ -50,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <OfflineBanner />
               <GuidedTour />
               <PersonaGate />
+              </InstallProvider>
             </PersonaProvider>
           </LangProvider>
         </ToastProvider>
