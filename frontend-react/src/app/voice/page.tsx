@@ -54,7 +54,7 @@ export default function VoicePage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Bhashini Voice Interface"
-        description="Ask OceanMind questions in <b>Hindi</b> or <b>Tamil</b> using voice or text. Pipeline: Bhashini ASR (STT) → RAG → Bhashini TTS."
+        description={'Talk to OceanMind in your own language — no typing, no English required. <span style="opacity:.6">Bhashini ASR → RAG → Bhashini TTS</span>'}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">

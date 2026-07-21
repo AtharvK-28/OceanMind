@@ -39,7 +39,7 @@ export default function AlertsPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Alerts & Subscriptions"
-        description="Zone-change SMS (Twilio) + Firebase FCM push. Bhashini voice alerts in <b>Hindi + Tamil</b>. &lt; 60s delivery SLA."
+        description={'Get told the moment your zone changes — by SMS, push, or voice in Hindi or Tamil. <span style="opacity:.6">Twilio SMS · Firebase FCM · Bhashini voice · &lt;60s delivery</span>'}
       />
 
       {/* Stats row */}

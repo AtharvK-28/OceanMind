@@ -162,7 +162,7 @@ export default function DigitalTwinPage() {
     <div className="animate-page-enter space-y-6">
       <HeroBanner
         title="Digital Twin — MHW Scenario Engine"
-        description="Parameterised SST perturbation → projected MHI score change + migration zone shift across the Indian EEZ. Select a zone, configure a scenario, and run the simulation."
+        description={'What happens if the sea warms 2°C this month? Model it and see the impact on fish stock and zones before it happens. <span style="opacity:.6">Parameterized SST perturbation → MHI + migration projection</span>'}
       />
 
       {/* ── Top row: controls + map ── */}

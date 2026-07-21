@@ -71,7 +71,7 @@ export default function BlockchainPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Catch Traceability Ledger"
-        description="SHA-256 hash chain catch ledger for end-to-end traceability. Every catch is timestamped, hashed, and immutably linked. Upgrading to <b>Hyperledger Fabric 2.5</b> for production."
+        description={'Prove where a catch came from, with a tamper-proof record buyers and regulators can verify. <span style="opacity:.6">SHA-256 hash chain · Hyperledger Fabric 2.5 planned for production</span>'}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
