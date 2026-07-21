@@ -42,6 +42,7 @@ class GFWPipeline:
         self.source_system   = "GFW_AIS"
         self.schema_version  = "1.0"
         self.ais_qc          = AISQualityPipeline()
+        self.last_fetch_was_live = False
 
     # ──────────────────────────────────────────────────────────────────────────
     # Public interface
@@ -66,6 +67,7 @@ class GFWPipeline:
             return self._fetch_live(lat_min, lat_max, lon_min, lon_max, days_back)
         else:
             logger.info("GFW: using synthetic fallback (set GFW_API_KEY + FALLBACK_DATA_MODE=false for live data)")
+            self.last_fetch_was_live = False
             return self._generate_synthetic(lat_min, lat_max, lon_min, lon_max, days_back)
 
     def ingest_to_db(self, df: pd.DataFrame) -> None:
@@ -150,6 +152,7 @@ class GFWPipeline:
             raw = resp.json()
         except requests.RequestException as exc:
             logger.warning(f"GFW API call failed ({exc}). Falling back to synthetic data.")
+            self.last_fetch_was_live = False
             return self._generate_synthetic(lat_min, lat_max, lon_min, lon_max, days_back)
 
         rows = []
@@ -169,11 +172,17 @@ class GFWPipeline:
                 "schema_version": self.schema_version,
             })
 
+        if not rows:
+            logger.warning("GFW API returned zero features for this window/bbox. Falling back to synthetic data.")
+            self.last_fetch_was_live = False
+            return self._generate_synthetic(lat_min, lat_max, lon_min, lon_max, days_back)
+
         df = pd.DataFrame(rows)
         logger.info(f"GFW live: parsed {len(df)} effort records.")
 
         # Run the 5-stage AIS quality pipeline
         df = self.ais_qc.process_batch(df)
+        self.last_fetch_was_live = True
         return df
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -225,7 +234,7 @@ class GFWPipeline:
                 base_lon = ground["lon"] + rng.normal(0, 0.8)
 
                 for d in range(days_back):
-                    dt = now - timedelta(days=d, hours=rng.integers(0, 8))
+                    dt = now - timedelta(days=d, hours=int(rng.integers(0, 8)))
 
                     # Drift 0–5 km per day (realistic for fishing vessels)
                     dlat = rng.normal(0, 0.05)

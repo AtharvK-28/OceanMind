@@ -25,6 +25,13 @@ from langchain_core.documents import Document
 from loguru import logger
 
 FAISS_INDEX_PATH = os.path.join(os.path.dirname(__file__), "faiss_index")
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PROJECT_DOCS = [
+    os.path.join(PROJECT_ROOT, "docs", "OceanMind_PRD.md"),
+    os.path.join(PROJECT_ROOT, "docs", "OceanMind_TRD.md"),
+    os.path.join(PROJECT_ROOT, "docs", "OceanMind_Implementation_Plan.md"),
+    os.path.join(PROJECT_ROOT, "README.md"),
+]
 
 # ── Domain knowledge base (in lieu of trained Bar 2020b corpus for MVP) ────────
 OCEAN_KNOWLEDGE = [
@@ -154,6 +161,55 @@ class OceanMindRAG:
         self._ready = False
         self._docs: list[Document] = []
 
+    def _load_project_docs(self) -> list[Document]:
+        """
+        Real retrieval source: the project's own PRD/TRD/Implementation Plan
+        and README, split by markdown section so each chunk carries a real
+        provenance pointer (filename + section heading), not a canned snippet.
+        """
+        docs: list[Document] = []
+        for path in PROJECT_DOCS:
+            if not os.path.exists(path):
+                logger.warning(f"RAG: project doc not found, skipping: {path}")
+                continue
+
+            filename = os.path.basename(path)
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+
+            # Split on markdown headings (# / ##) — one Document per section
+            sections: list[tuple[str, list[str]]] = []
+            current_heading = "Introduction"
+            current_lines: list[str] = []
+            for line in text.splitlines():
+                if line.startswith("#"):
+                    if current_lines:
+                        sections.append((current_heading, current_lines))
+                    current_heading = line.lstrip("#").strip() or current_heading
+                    current_lines = []
+                else:
+                    current_lines.append(line)
+            if current_lines:
+                sections.append((current_heading, current_lines))
+
+            for heading, lines in sections:
+                body = "\n".join(lines).strip()
+                if len(body) < 80:  # skip near-empty sections (e.g. table-of-contents stubs)
+                    continue
+                docs.append(Document(
+                    page_content=f"{heading}\n{body}",
+                    metadata={
+                        "source_id": f"{filename}#{heading[:60]}",
+                        "source_system": filename,
+                        "quality_flag": "GOOD",
+                        "ingestion_ts": datetime.now(timezone.utc).isoformat(),
+                        "schema_version": "1.0",
+                    },
+                ))
+
+        logger.info(f"RAG: loaded {len(docs)} real sections from {len(PROJECT_DOCS)} project documents.")
+        return docs
+
     def initialise(self):
         """Build FAISS index + initialise LLM (xAI Grok or Groq)."""
         xai_key = os.getenv("XAI_API_KEY", "")
@@ -184,6 +240,7 @@ class OceanMindRAG:
             )
             for item in OCEAN_KNOWLEDGE
         ]
+        self._docs.extend(self._load_project_docs())
 
         # Split long documents
         splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)

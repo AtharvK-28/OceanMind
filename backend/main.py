@@ -3,6 +3,7 @@ OceanMind — FastAPI Backend (Phases A–H MVP)
 Run: uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 Docs: http://localhost:8000/docs
 """
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -397,6 +398,71 @@ mhi_model = MarineHealthIndex()
 sfz_model = SFZClassifier()
 
 
+async def _incois_cache_refresh_loop():
+    """
+    Keeps the INCOIS live SST/chlorophyll cache warm so /api/v1/incois/live
+    never makes a user's request block on the slow first CMEMS fetch
+    (`copernicusmarine.open_dataset` alone takes ~60-70s). Runs once on
+    startup, then on an interval set just under the cache TTL, so in steady
+    state every request is a cache hit. Blocking calls run in a thread so
+    they don't stall the event loop.
+    """
+    from backend.ingestion.incois_pipeline import IncoisPipeline, FALLBACK_MODE, CHL_CACHE_TTL_SECONDS
+
+    if FALLBACK_MODE:
+        logger.info("INCOIS cache warmer: FALLBACK_DATA_MODE=true, nothing live to warm — skipping.")
+        return
+
+    refresh_interval = max(60, CHL_CACHE_TTL_SECONDS - 600)
+    pipeline = IncoisPipeline()
+    while True:
+        try:
+            logger.info("INCOIS cache warmer: refreshing live SST/chlorophyll grid...")
+            await asyncio.to_thread(pipeline.fetch_recent_composites)
+            logger.success(f"INCOIS cache warmer: refreshed | live={pipeline.last_fetch_was_live}")
+        except Exception as exc:
+            logger.warning(f"INCOIS cache warmer: refresh failed ({exc}), will retry next interval.")
+        await asyncio.sleep(refresh_interval)
+
+
+def _seed_demo_catches():
+    """
+    Seed the mock ledger with a spread of recent community catches so the
+    Community Catch Map has content out of the box. Only runs if the ledger
+    is empty (real fisher logs append on top). These are demo entries in a
+    ledger already labelled 'MOCK' — not presented as verified production data.
+    Skipped entirely under tests (the lifespan doesn't fire there).
+    """
+    if ledger.get_chain_summary()["total_catch_records"] > 0:
+        return
+
+    now = datetime.now(timezone.utc)
+    # (landing_site, lat, lon, species_name, aphia_id, quantity_kg, hours_ago, token)
+    demo = [
+        ("VERAVAL_GJ", 20.55, 69.80, "Indian Mackerel", 217044, 240, 2,  "DEMO_GJ_01"),
+        ("VERAVAL_GJ", 20.30, 69.55, "Oil Sardine",     217033, 180, 5,  "DEMO_GJ_02"),
+        ("VERAVAL_GJ", 20.70, 70.05, "Silver Pomfret",  218485, 65,  9,  "DEMO_GJ_03"),
+        ("MANGALORE_KA", 12.70, 74.55, "Oil Sardine",   217033, 300, 3,  "DEMO_KA_01"),
+        ("MANGALORE_KA", 12.95, 74.40, "Indian Mackerel", 217044, 210, 7, "DEMO_KA_02"),
+        ("KOCHI_KL", 9.80, 75.80, "Oil Sardine",        217033, 275, 1,  "DEMO_KL_01"),
+        ("KOCHI_KL", 9.60, 75.55, "Seer Fish",          211834, 90,  4,  "DEMO_KL_02"),
+        ("KOCHI_KL", 10.05, 76.00, "Indian Mackerel",   217044, 160, 11, "DEMO_KL_03"),
+        ("CHENNAI_TN", 13.05, 80.55, "Yellowfin Tuna",  127660, 120, 6,  "DEMO_TN_01"),
+        ("CHENNAI_TN", 12.85, 80.75, "Silver Pomfret",  218485, 70,  14, "DEMO_TN_02"),
+        ("VIZAG_AP", 17.65, 83.55, "Yellowfin Tuna",    127660, 145, 3,  "DEMO_AP_01"),
+        ("VIZAG_AP", 17.85, 83.75, "Giant Tiger Prawn", 158966, 55,  8,  "DEMO_AP_02"),
+        ("VIZAG_AP", 17.45, 83.60, "Indian Mackerel",   217044, 195, 18, "DEMO_AP_03"),
+        ("MANGALORE_KA", 13.05, 74.30, "Giant Tiger Prawn", 158966, 48, 22, "DEMO_KA_03"),
+    ]
+    for site, lat, lon, name, aphia, qty, hours_ago, token in demo:
+        ledger.log_catch_event(
+            species_aphia_id=aphia, species_name=name, quantity_kg=float(qty),
+            latitude=lat, longitude=lon, landing_site_id=site,
+            timestamp=now - timedelta(hours=hours_ago), fisher_token=token,
+        )
+    logger.info(f"Seeded {len(demo)} demo community catches into the mock ledger.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global mhi_model, sfz_model
@@ -431,8 +497,13 @@ async def lifespan(app: FastAPI):
     # Initialise RAG (lazy — first query triggers embedding build)
     logger.info("RAG pipeline will initialise on first query.")
 
+    _seed_demo_catches()
+
+    incois_refresh_task = asyncio.create_task(_incois_cache_refresh_loop())
+
     logger.success("OceanMind backend ready.")
     yield
+    incois_refresh_task.cancel()
     logger.info("OceanMind backend shutting down.")
 
 
@@ -1094,7 +1165,7 @@ class EDNARequest(BaseModel):
 _INDIAN_OCEAN_SPECIES = [
     # ── Original marine/pelagic species ───────────────────────────────
     {"species": "Rastrelliger kanagurta",    "common": "Indian Mackerel",       "aphia_id": 217044,
-     "a": 0.0058, "b": 3.09, "fl_mean": 220, "fl_std": 30,  "classifier_key": "IndianMackerel"},
+     "a": 0.0108, "b": 3.02, "fl_mean": 220, "fl_std": 30,  "classifier_key": "IndianMackerel"},
     {"species": "Sardinella longiceps",      "common": "Oil Sardine",           "aphia_id": 217033,
      "a": 0.0063, "b": 3.05, "fl_mean": 165, "fl_std": 25,  "classifier_key": "IndianOilSardine"},
     {"species": "Penaeus monodon",           "common": "Giant Tiger Prawn",     "aphia_id": 158966,
@@ -1248,15 +1319,40 @@ def _get_classifier():
     return _classifier_model, _classifier_class_names, _classifier_transform
 
 
-def _classify_species(img_crop, class_names, model, transform) -> tuple[str, float]:
-    """Classify a PIL image crop into a species. Returns (class_name, confidence)."""
+# A fish photo from a phone rarely matches the tiny training set exactly, so a
+# top-1 guess below this softmax probability is treated as "uncertain" — the API
+# still returns it, but flags it and offers runners-up instead of asserting it.
+CV_UNCERTAIN_THRESHOLD = 0.55
+
+
+def _classify_species(img_crop, class_names, model, transform, topk: int = 3) -> list[tuple[str, float]]:
+    """Classify a PIL image crop. Returns up to `topk` (class_name, confidence)
+    pairs sorted high→low, so callers can flag low-confidence guesses and offer
+    alternatives instead of confidently asserting a single species."""
     import torch
     tensor = transform(img_crop.convert("RGB")).unsqueeze(0)
     with torch.no_grad():
         logits = model(tensor)
-        probs = torch.softmax(logits, dim=1)
-        conf, idx = probs.max(1)
-    return class_names[idx.item()], float(conf.item())
+        probs = torch.softmax(logits, dim=1)[0]
+    k = min(topk, probs.numel())
+    confs, idxs = probs.topk(k)
+    return [(class_names[i], float(c)) for c, i in zip(confs.tolist(), idxs.tolist())]
+
+
+def _alts_from_topk(topk: list[tuple[str, float]], skip_first: bool = True) -> list[dict]:
+    """Turn classifier runners-up into alternative species suggestions (known
+    species only), so the UI can ask 'is it one of these?' when unsure."""
+    alts = []
+    for cls_name, conf in (topk[1:] if skip_first else topk):
+        sp = _CLASSIFIER_KEY_TO_SPECIES.get(cls_name)
+        if sp is not None:
+            alts.append({
+                "species_common": sp["common"],
+                "species_scientific": sp["species"],
+                "aphia_id": sp["aphia_id"],
+                "confidence": round(conf, 3),
+            })
+    return alts
 
 
 def _yolo_detect(image_base64: str, region: str) -> list[dict]:
@@ -1281,12 +1377,13 @@ def _yolo_detect(image_base64: str, region: str) -> list[dict]:
 
         # Fallback: no YOLO detections → classify whole image directly
         if len(boxes) == 0 and classifier is not None and clf_transform is not None:
-            cls_name, cls_conf = _classify_species(img, class_names, classifier, clf_transform)
+            topk = _classify_species(img, class_names, classifier, clf_transform)
+            cls_name, cls_conf = topk[0]
             sp = _CLASSIFIER_KEY_TO_SPECIES.get(cls_name)
             if sp is not None:
                 w, h = img.size
                 est_fork_mm = float(np.clip(rng.normal(sp["fl_mean"], sp["fl_std"]), 50, 1200))
-                est_weight_g = float(sp["a"] * (est_fork_mm ** sp["b"]))
+                est_weight_g = float(sp["a"] * ((est_fork_mm / 10) ** sp["b"]))
                 return [{
                     "detection_id": 1,
                     "species_scientific": sp["species"],
@@ -1294,8 +1391,11 @@ def _yolo_detect(image_base64: str, region: str) -> list[dict]:
                     "aphia_id": sp["aphia_id"],
                     "worms": _worms_lookup(sp["aphia_id"]),
                     "confidence": round(cls_conf, 3),
+                    "uncertain": cls_conf < CV_UNCERTAIN_THRESHOLD,
+                    "alternatives": _alts_from_topk(topk),
                     "fork_length_mm": round(est_fork_mm, 1),
                     "estimated_weight_g": round(est_weight_g, 1),
+                    "length_estimated": True,
                     "yolo_raw_class": "whole_image",
                     "bounding_box": {"x1": 0, "y1": 0, "x2": w, "y2": h},
                     "source": "resnet50_whole_image",
@@ -1314,13 +1414,20 @@ def _yolo_detect(image_base64: str, region: str) -> list[dict]:
             sp = None
             species_conf = yolo_conf
             source = "yolov8_detection"
+            # Default to uncertain: only a confident classifier match clears it.
+            # A region-weighted guess (classifier couldn't identify the crop) stays uncertain.
+            uncertain = True
+            alternatives: list[dict] = []
 
             if classifier is not None and clf_transform is not None:
                 crop = img.crop((x1, y1, x2, y2))
-                cls_name, cls_conf = _classify_species(crop, class_names, classifier, clf_transform)
+                topk = _classify_species(crop, class_names, classifier, clf_transform)
+                cls_name, cls_conf = topk[0]
                 sp = _CLASSIFIER_KEY_TO_SPECIES.get(cls_name)
                 if sp is not None:
                     species_conf = round(cls_conf, 3)
+                    uncertain = cls_conf < CV_UNCERTAIN_THRESHOLD
+                    alternatives = _alts_from_topk(topk)
                     source = "yolov8+resnet50_classifier"
 
             if sp is None:
@@ -1331,11 +1438,10 @@ def _yolo_detect(image_base64: str, region: str) -> list[dict]:
                 sp_idx = rng.choice(len(_INDIAN_OCEAN_SPECIES), p=weights)
                 sp = _INDIAN_OCEAN_SPECIES[sp_idx]
 
-            bbox_w_px = x2 - x1
             est_fork_mm = float(np.clip(
                 rng.normal(sp["fl_mean"], sp["fl_std"]), 50, 1200
             ))
-            est_weight_g = float(sp["a"] * (est_fork_mm ** sp["b"]))
+            est_weight_g = float(sp["a"] * ((est_fork_mm / 10) ** sp["b"]))
 
             detections.append({
                 "detection_id": i + 1,
@@ -1344,8 +1450,11 @@ def _yolo_detect(image_base64: str, region: str) -> list[dict]:
                 "aphia_id": sp["aphia_id"],
                 "worms": _worms_lookup(sp["aphia_id"]),
                 "confidence": species_conf,
+                "uncertain": uncertain,
+                "alternatives": alternatives,
                 "fork_length_mm": round(est_fork_mm, 1),
                 "estimated_weight_g": round(est_weight_g, 1),
+                "length_estimated": True,
                 "yolo_raw_class": yolo_cls,
                 "bounding_box": {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
                 "source": source,
@@ -1416,7 +1525,7 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
             sp = _INDIAN_OCEAN_SPECIES[sp_idx]
             confidence = float(np.clip(rng.normal(0.85, 0.06), 0.60, 0.99))
             fork_length_mm = float(np.clip(rng.normal(sp["fl_mean"], sp["fl_std"]), 50, 1200))
-            weight_g = float(sp["a"] * (fork_length_mm ** sp["b"]))
+            weight_g = float(sp["a"] * ((fork_length_mm / 10) ** sp["b"]))
             detections.append({
                 "detection_id": i + 1,
                 "species_scientific": sp["species"],
@@ -1426,6 +1535,7 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
                 "confidence": round(confidence, 3),
                 "fork_length_mm": round(fork_length_mm, 1),
                 "estimated_weight_g": round(weight_g, 1),
+                "length_estimated": True,
                 "region": region,
                 "bounding_box": {
                     "x1": int(rng.integers(10, 200)),
@@ -1440,6 +1550,28 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
         s = d["species_scientific"]
         species_summary[s] = species_summary.get(s, 0) + 1
 
+    # Fisher-facing "this looks like…" summary — only when a real photo was
+    # actually classified (not the region-weighted synthetic sample), picking the
+    # most confident detection as the primary identification.
+    identification = None
+    from_image = bool(req.image_base64) and any(
+        str(d.get("source", "")).startswith(("resnet", "yolov8")) for d in detections
+    )
+    if from_image and detections:
+        primary = max(detections, key=lambda d: d.get("confidence", 0.0))
+        identification = {
+            "species_common": primary["species_common"],
+            "species_scientific": primary["species_scientific"],
+            "aphia_id": primary["aphia_id"],
+            "confidence": primary["confidence"],
+            "uncertain": bool(primary.get("uncertain", False)),
+            "alternatives": primary.get("alternatives", []),
+            "fork_length_mm": primary.get("fork_length_mm"),
+            "estimated_weight_g": primary.get("estimated_weight_g"),
+            "length_estimated": True,
+            "from_image": True,
+        }
+
     return {
         "site": {
             "lat": req.site_lat,
@@ -1448,6 +1580,7 @@ async def cv_analyze_catch(req: CVAnalysisRequest):
         },
         "total_fish_detected": len(detections),
         "species_summary": species_summary,
+        "identification": identification,
         "detections": detections,
         "model": cv_model,
         "pipeline_stages": [
@@ -1624,14 +1757,21 @@ def _mhi_projection(sst_delta: float, duration_weeks: int,
             chl_bonus = min(10, baseline_chl * 8)
             baseline = float(np.clip(70 - sst_penalty - do_penalty + chl_bonus + rng.normal(0, 3), 20, 95))
 
-            # Thermal stress: vulnerability × intensity × sqrt(duration)
-            stress = vuln * abs(sst_delta) * 4.0 * np.sqrt(duration_weeks / 4)
-            if sst_delta < 0:
-                stress *= 0.4  # cooling is less harmful than warming
-
-            # Compound stress: warming + low DO zones get extra hit (Arabian Sea OMZ)
-            if baseline_do < 185 and sst_delta > 0:
-                stress *= 1.3  # DO-temperature synergy (Breitburg et al. 2018)
+            # Net thermal effect on an already-warm tropical sea:
+            #   warming above the current state stresses the system;
+            #   mild cooling (up to ~2C) relieves heat stress → net benefit;
+            #   only strong cooling beyond that re-introduces cold stress.
+            duration_factor = np.sqrt(duration_weeks / 4)
+            if sst_delta >= 0:
+                stress = vuln * sst_delta * 4.0 * duration_factor
+                # DO-temperature synergy: warming + low-DO zones hit harder (Breitburg 2018)
+                if baseline_do < 185:
+                    stress *= 1.3
+            else:
+                cool = -sst_delta                     # magnitude of cooling
+                relief = min(cool, 2.0)               # first ~2C relieves heat stress
+                cold = max(0.0, cool - 2.0)           # excess drives cold stress
+                stress = (-relief * vuln * 1.5 + cold * vuln * 4.0) * duration_factor
 
             projected = float(np.clip(baseline - stress + rng.normal(0, 2), 0, 100))
             delta = round(projected - baseline, 1)
@@ -1650,6 +1790,121 @@ def _mhi_projection(sst_delta: float, duration_weeks: int,
                 ),
             })
     return points
+
+
+def _mhi_field(sst_delta: float, lats, lons, rng: np.random.Generator) -> list:
+    """
+    Time-independent MHI field: per-cell baseline and a stress *coefficient*.
+
+    Projected MHI at any elapsed week w is  baseline - coeff * sqrt(w / 4),
+    so a whole heatwave trajectory can be animated from a single compact payload
+    without re-running the model per frame (and every frame stays physically
+    consistent with the /scenario endpoint's formula).
+    """
+    month = datetime.now().month
+    cells = []
+    for lat in lats:
+        for lon in lons:
+            if not _is_ocean(lat, lon):
+                continue
+            zone = _eez_zone(lat, lon)
+            c = _CLIMATOLOGY[zone]
+            vuln = _THERMAL_VULNERABILITY[zone]
+
+            seasonal = c["sst_seasonal_amp"] * np.sin((month - 3) * np.pi / 6)
+            baseline_sst = c["sst_base"] + seasonal
+            sst_penalty = max(0, abs(baseline_sst - 27.5) - 1.5) * 5
+            do_penalty = max(0, (180 - c["do_mean"])) * 0.2
+            chl_bonus = min(10, c["chl_mean"] * 8)
+            baseline = float(np.clip(70 - sst_penalty - do_penalty + chl_bonus + rng.normal(0, 3), 20, 95))
+
+            # Stress per unit duration_factor (i.e. stress at week 4). Same logic as
+            # _mhi_projection, but factored out of the sqrt(weeks) time term.
+            if sst_delta >= 0:
+                coeff = vuln * sst_delta * 4.0
+                if c["do_mean"] < 185:
+                    coeff *= 1.3
+            else:
+                cool = -sst_delta
+                relief = min(cool, 2.0)
+                cold = max(0.0, cool - 2.0)
+                coeff = -relief * vuln * 1.5 + cold * vuln * 4.0
+
+            cells.append({
+                "lat": round(float(lat), 3),
+                "lon": round(float(lon), 3),
+                "baseline": round(baseline, 1),
+                "coeff": round(float(coeff), 3),
+            })
+    return cells
+
+
+def _alert_of(mhi: float) -> str:
+    return ("CRITICAL" if mhi < 25 else "WARNING" if mhi < 50 else
+            "WATCH" if mhi < 65 else "NORMAL")
+
+
+@app.post("/api/v1/digital-twin/simulate", tags=["Digital Twin"])
+async def simulate_trajectory(req: ScenarioRequest):
+    """
+    Animated marine-heatwave trajectory for the What-If explorer.
+
+    Returns a compact spatial field plus a week-by-week schedule so the frontend
+    can animate the heatwave building (or a cold event relieving) over time.
+    Same thermal-response model as /scenario, factored for smooth time stepping.
+    Indicative projection, not a certified forecast.
+    """
+    rng = np.random.default_rng(seed=42)
+    shelf = _SHELF_GRID[::3]  # coarser grid for a fluid 3D animation
+    lats = np.array([p[0] for p in shelf])
+    lons = np.array([p[1] for p in shelf])
+
+    cells = _mhi_field(req.sst_delta_c, lats, lons, rng)
+    base_arr = np.array([c["baseline"] for c in cells])
+    coeff_arr = np.array([c["coeff"] for c in cells])
+
+    total = max(1, int(req.duration_weeks))
+    # Sample up to ~14 frames (always include week 0 and the final week).
+    if total <= 14:
+        weeks = list(range(0, total + 1))
+    else:
+        weeks = sorted(set([0] + [round(total * i / 13) for i in range(1, 14)]))
+
+    timeline = []
+    for w in weeks:
+        df = float(np.sqrt(w / 4)) if w > 0 else 0.0
+        proj = np.clip(base_arr - coeff_arr * df, 0, 100)
+        crit = int(np.sum(proj < 50))
+        mig = req.sst_delta_c * 0.4 * min(1.0, w / 12)
+        timeline.append({
+            "week": w,
+            "avg_mhi": round(float(np.mean(proj)), 1),
+            "critical_cells": crit,
+            "poleward_shift_deg": round(float(mig), 2),
+        })
+
+    species_impacts = _species_impact(req.sst_delta_c, req.duration_weeks)
+    return {
+        "scenario": {
+            "name": req.scenario_name or f"{req.sst_delta_c:+.1f}°C SST for {req.duration_weeks} weeks",
+            "sst_delta_c": req.sst_delta_c,
+            "duration_weeks": req.duration_weeks,
+            "severity": (
+                "EXTREME" if req.sst_delta_c >= 4 else
+                "SEVERE"  if req.sst_delta_c >= 2.5 else
+                "MODERATE" if req.sst_delta_c >= 1.0 else "MILD"
+            ),
+        },
+        "grid_cells": len(cells),
+        "cells": cells,
+        "timeline": timeline,
+        "baseline_mhi": round(float(np.mean(base_arr)), 1),
+        "final_mhi": timeline[-1]["avg_mhi"],
+        "species_impact": species_impacts,
+        "model": "Thermal-stress response model, calibrated to published shift rates (indicative projection)",
+        "method_note": "Indicative projection from regional climatology + literature thermal-response rates — not a certified forecast.",
+        "computed_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def _migration_shift(sst_delta: float, duration_weeks: int,
@@ -1701,10 +1956,20 @@ def _species_impact(sst_delta: float, duration_weeks: int) -> list:
     for aphia_id, info in _SPECIES_THERMAL_RESPONSE.items():
         shift_deg = info["shift_rate"] * sst_delta
         duration_factor = min(1.0, duration_weeks / 8)
-        stress_ratio = abs(sst_delta) / info["collapse_delta"]
-        abundance_change = -stress_ratio * duration_factor * 100  # % decline
-        if sst_delta < 0:
-            abundance_change *= 0.3  # cooling less harmful
+
+        # Effective thermal stress is warming-dominated: mild cooling gives a small
+        # abundance relief, only strong cooling (beyond ~2C) counts as cold stress.
+        if sst_delta >= 0:
+            eff_delta = sst_delta
+        else:
+            eff_delta = max(0.0, -sst_delta - 2.0)  # only excess cooling stresses
+
+        stress_ratio = eff_delta / info["collapse_delta"]
+        if sst_delta < 0 and eff_delta == 0:
+            # mild cooling: modest recovery, capped
+            abundance_change = min(6.0, -sst_delta * 2.0) * duration_factor
+        else:
+            abundance_change = -stress_ratio * duration_factor * 100  # % decline
 
         status = "STABLE"
         if stress_ratio >= 1.0:
@@ -1728,16 +1993,17 @@ def _species_impact(sst_delta: float, duration_weeks: int) -> list:
 @app.post("/api/v1/digital-twin/scenario", tags=["Digital Twin"])
 async def run_scenario(req: ScenarioRequest):
     """
-    Phase G — Digital Twin MHW (Marine HeatWave) scenario engine.
+    Digital Twin — marine-heatwave "what-if" scenario engine.
 
-    Accepts parameterised SST perturbation → projects:
-      • MHI score change per grid cell (Isolation Forest baseline + thermal stress model)
-      • Migration zone shift (ConvLSTM poleward-shift heuristic)
+    Accepts a parameterised SST perturbation and projects the response of the
+    Indian EEZ from regional climatology baselines:
+      • MHI score change per grid cell (thermal-stress response model)
+      • Migration zone shift (poleward-shift model, ~0.4 deg lat/degC, Cheung 2013)
+      • Species-level thermal impact (shift + abundance, calibrated to CMFRI/literature)
 
-    Target: < 30s compute time on Streamlit dashboard.
-    Full Phase 2 twin: Lagrangian particle tracking (OceanParcels), larval connectivity IBM.
-
-    Reference: Aguzzi et al. 2025 — Digital twins for ocean observation (Nature Reviews).
+    This is an indicative projection built on published thermal-response rates,
+    not a certified forecast. Roadmap: Lagrangian particle tracking (OceanParcels)
+    and larval-connectivity IBM for a full mechanistic twin.
     """
     rng = np.random.default_rng(seed=42)
     shelf = _SHELF_GRID[::2]  # every 2nd point for speed
@@ -1746,7 +2012,7 @@ async def run_scenario(req: ScenarioRequest):
 
     result = {
         "scenario": {
-            "name": req.scenario_name or f"+{req.sst_delta_c}°C SST for {req.duration_weeks} weeks",
+            "name": req.scenario_name or f"{req.sst_delta_c:+.1f}°C SST for {req.duration_weeks} weeks",
             "sst_delta_c": req.sst_delta_c,
             "duration_weeks": req.duration_weeks,
             "severity": (
@@ -1758,21 +2024,28 @@ async def run_scenario(req: ScenarioRequest):
         "computed_at": datetime.now(timezone.utc).isoformat(),
         "grid_resolution_deg": 2.0,
         "coverage": "Indian EEZ",
-        "model": "Thermal stress model + ConvLSTM poleward-shift heuristic (MVP)",
-        "phase2_note": "Full twin: Lagrangian IBM via OceanParcels + socioecological ABM",
+        "model": "Thermal-stress response model, calibrated to published shift rates (indicative projection)",
+        "method_note": "Indicative projection from regional climatology + literature thermal-response rates — not a certified forecast.",
+        "roadmap_note": "Full mechanistic twin: Lagrangian IBM via OceanParcels + socioecological ABM",
     }
 
     if req.include_mhi_projection:
         mhi_grid = _mhi_projection(req.sst_delta_c, req.duration_weeks, lats, lons, rng)
         critical_cells = [p for p in mhi_grid if p["alert_level"] in ("CRITICAL", "WARNING")]
         avg_delta = float(np.mean([p["delta_mhi"] for p in mhi_grid]))
+        avg_baseline = float(np.mean([p["baseline_mhi"] for p in mhi_grid]))
+        avg_projected = float(np.mean([p["projected_mhi"] for p in mhi_grid]))
+        direction = "decline" if avg_delta < 0 else "improvement"
         result["mhi_projection"] = {
             "grid_points": len(mhi_grid),
+            "baseline_mhi": round(avg_baseline, 1),
+            "projected_mhi": round(avg_projected, 1),
             "avg_delta_mhi": round(avg_delta, 2),
             "critical_cells": len(critical_cells),
             "data": mhi_grid,
             "summary": (
-                f"Scenario projects avg MHI decline of {abs(avg_delta):.1f} points. "
+                f"Fleet-wide MHI {round(avg_baseline,1)} → {round(avg_projected,1)} "
+                f"(avg {direction} of {abs(avg_delta):.1f} points). "
                 f"{len(critical_cells)} grid cells enter WARNING or CRITICAL."
             ),
         }
@@ -2095,4 +2368,377 @@ async def fishing_advisory(req: FishingAdvisoryRequest):
         "advisory": advisory,
         "data_source": "Open-Meteo Marine API (ERA5-Marine + GFS)",
         "queried_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+# =============================================================================
+# Live Data Sources (Phase A — real external ingestion, no DB required)
+# =============================================================================
+#
+# These endpoints call the ingestion pipelines directly and return results
+# inline, so they work standalone (no PostGIS needed) and honestly report
+# whether the data returned is live or synthetic fallback via `is_live`.
+
+from backend.ingestion.argo_pipeline import ArgoPipeline
+from backend.ingestion.gfw_pipeline import GFWPipeline
+from backend.ingestion.incois_pipeline import IncoisPipeline
+
+
+@app.get("/api/v1/argo/live", tags=["Live Data Sources"])
+async def argo_live(
+    lat_min: float = Query(5.0, description="Southern boundary"),
+    lat_max: float = Query(25.0, description="Northern boundary"),
+    lon_min: float = Query(60.0, description="Western boundary"),
+    lon_max: float = Query(100.0, description="Eastern boundary"),
+    days_back: int = Query(10, ge=1, le=30, description="Lookback window in days"),
+):
+    """
+    Real ARGO float profiles from the public Argovis API for the given bbox.
+
+    Data source: Argovis (https://argovis.colorado.edu), no key required.
+    Set FALLBACK_DATA_MODE=false in .env to enable live fetches — otherwise
+    returns synthetic profiles matching the same schema (`is_live: false`).
+    dissolved_o2/ph are null on live data (not measured by core Argo floats).
+    """
+    pipeline = ArgoPipeline()
+    try:
+        df = pipeline.fetch_recent_profiles(
+            lat_min=lat_min, lat_max=lat_max, lon_min=lon_min, lon_max=lon_max, days_back=days_back
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ARGO fetch failed: {e}")
+
+    records = json.loads(df.to_json(orient="records", date_format="iso"))
+    return {
+        "is_live": pipeline.last_fetch_was_live,
+        "source": "Argovis (real WMO floats)" if pipeline.last_fetch_was_live else "synthetic fallback",
+        "count": len(records),
+        "profiles": records,
+        "queried_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/v1/gfw/live", tags=["Live Data Sources"])
+async def gfw_live(
+    lat_min: float = Query(5.0, description="Southern boundary"),
+    lat_max: float = Query(25.0, description="Northern boundary"),
+    lon_min: float = Query(60.0, description="Western boundary"),
+    lon_max: float = Query(100.0, description="Eastern boundary"),
+    days_back: int = Query(7, ge=1, le=30, description="Lookback window in days"),
+):
+    """
+    Real fishing-effort AIS data from the Global Fishing Watch API for the given bbox.
+
+    Requires GFW_API_KEY + FALLBACK_DATA_MODE=false in .env for live data —
+    otherwise returns synthetic AIS records matching the same schema
+    (`is_live: false`). Register a free key at globalfishingwatch.org.
+    """
+    pipeline = GFWPipeline()
+    try:
+        df = pipeline.fetch_recent_effort(
+            lat_min=lat_min, lat_max=lat_max, lon_min=lon_min, lon_max=lon_max, days_back=days_back
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"GFW fetch failed: {e}")
+
+    records = json.loads(df.to_json(orient="records", date_format="iso"))
+    return {
+        "is_live": pipeline.last_fetch_was_live,
+        "source": "Global Fishing Watch (real AIS)" if pipeline.last_fetch_was_live else "synthetic fallback",
+        "count": len(records),
+        "effort_records": records,
+        "queried_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/v1/incois/live", tags=["Live Data Sources"])
+async def incois_live(
+    lat_min: float = Query(10.0, description="Southern boundary"),
+    lat_max: float = Query(15.0, description="Northern boundary"),
+    lon_min: float = Query(70.0, description="Western boundary"),
+    lon_max: float = Query(75.0, description="Eastern boundary"),
+    grid_step: float = Query(1.0, gt=0, le=5, description="Grid spacing in degrees"),
+):
+    """
+    SST + chlorophyll-a grid over the given bbox.
+
+    SST: live via Open-Meteo (free, no key) whenever FALLBACK_DATA_MODE=false.
+    Chlorophyll: live via Copernicus Marine Service, only if
+    COPERNICUSMARINE_USERNAME/PASSWORD are set — otherwise estimated.
+    ssh_anomaly/mld_m/wind_stress_curl/pfz_advisory have no free live source
+    wired up yet and are always estimated (see `is_live` for the honest state
+    of each field).
+    """
+    pipeline = IncoisPipeline()
+    try:
+        df = pipeline.fetch_recent_composites(
+            lat_min=lat_min, lat_max=lat_max, lon_min=lon_min, lon_max=lon_max, grid_step=grid_step
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"INCOIS fetch failed: {e}")
+
+    records = json.loads(df.to_json(orient="records", date_format="iso"))
+    return {
+        "is_live": pipeline.last_fetch_was_live,
+        "count": len(records),
+        "grid": records,
+        "queried_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+
+# =============================================================================
+# Regulatory Compliance — "Can I fish here today?"
+# =============================================================================
+#
+# Answers whether fishing is currently permitted at a location, from two rules:
+#   1. Seasonal monsoon fishing ban (annual, differs by coast) — real published
+#      windows from state MFRA / CMFRI advisories.
+#   2. Marine protected areas (no-take zones) — a set of real Indian MPAs as
+#      approximate circles.
+# Advisory only (DENIED-003: insight, not enforcement) — verify with the local
+# fisheries authority. Dates are the widely-published uniform windows; exact
+# start/end vary slightly by state and year.
+
+WEST_COAST_BAN = (6, 1, 7, 31)    # Jun 1 - Jul 31 (Gujarat->Kerala, ~61 days)
+EAST_COAST_BAN = (4, 15, 6, 14)   # Apr 15 - Jun 14 (WB->Tamil Nadu, ~61 days)
+
+NO_TAKE_ZONES = [
+    {"name": "Gulf of Kachchh Marine National Park", "type": "Marine National Park", "lat": 22.45, "lon": 69.40, "radius_km": 45},
+    {"name": "Malvan Marine Sanctuary",              "type": "Marine Sanctuary",     "lat": 16.05, "lon": 73.45, "radius_km": 12},
+    {"name": "Gulf of Mannar Marine National Park",  "type": "Marine National Park", "lat": 9.10,  "lon": 79.20, "radius_km": 50},
+    {"name": "Sundarbans (core)",                    "type": "Biosphere Reserve",    "lat": 21.90, "lon": 88.90, "radius_km": 55},
+]
+
+
+def _coast_of(lon: float) -> str:
+    """West (Arabian Sea) vs East (Bay of Bengal) coast — split near Kanyakumari."""
+    return "west" if lon < 78.0 else "east"
+
+
+def _compliance_haversine_km(lat1, lon1, lat2, lon2) -> float:
+    from math import radians, sin, cos, atan2, sqrt
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    return 6371.0 * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+
+@app.get("/api/v1/compliance/status", tags=["Compliance"])
+async def compliance_status(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    on: Optional[str] = Query(None, description="ISO date (YYYY-MM-DD); defaults to today"),
+):
+    """Is fishing legally permitted at (lat, lon) on the given date?"""
+    d = date.fromisoformat(on) if on else date.today()
+    coast = _coast_of(lon)
+
+    # 1. Marine protected area (overrides season)
+    for z in NO_TAKE_ZONES:
+        if _compliance_haversine_km(lat, lon, z["lat"], z["lon"]) <= z["radius_km"]:
+            return {
+                "location": {"lat": lat, "lon": lon, "coast": coast},
+                "date": d.isoformat(),
+                "fishing_allowed": False,
+                "status": "NO_TAKE",
+                "headline": "Protected marine area",
+                "detail": f"{z['name']} — fishing restricted year-round in this no-take zone.",
+                "protected_zone": {"name": z["name"], "type": z["type"]},
+                "next_change": None,
+                "source": "Indian marine protected-area boundaries (approximate). Advisory — verify locally.",
+            }
+
+    # 2. Seasonal monsoon ban
+    sm, sd, em, ed = WEST_COAST_BAN if coast == "west" else EAST_COAST_BAN
+    start = date(d.year, sm, sd)
+    end = date(d.year, em, ed)
+    banned = start <= d <= end
+    coast_label = "West-coast" if coast == "west" else "East-coast"
+    window_label = f"{start.strftime('%d %b')} - {end.strftime('%d %b')}"
+
+    if banned:
+        lifts = end + timedelta(days=1)
+        days_left = (end - d).days + 1
+        return {
+            "location": {"lat": lat, "lon": lon, "coast": coast},
+            "date": d.isoformat(),
+            "fishing_allowed": False,
+            "status": "SEASONAL_BAN",
+            "headline": "Monsoon fishing ban active",
+            "detail": f"{coast_label} annual ban ({window_label}). {days_left} day(s) remaining.",
+            "protected_zone": None,
+            "next_change": {"date": lifts.isoformat(), "days": days_left, "becomes": "OPEN"},
+            "source": "State MFRA / CMFRI seasonal-ban calendars. Advisory — verify locally.",
+        }
+
+    # Open — days until the next ban starts
+    next_start = start if d < start else date(d.year + 1, sm, sd)
+    days_to_ban = (next_start - d).days
+    return {
+        "location": {"lat": lat, "lon": lon, "coast": coast},
+        "date": d.isoformat(),
+        "fishing_allowed": True,
+        "status": "OPEN",
+        "headline": "Fishing permitted",
+        "detail": f"{coast_label} waters are open. Next monsoon ban begins {next_start.strftime('%d %b')} ({days_to_ban} days).",
+        "protected_zone": None,
+        "next_change": {"date": next_start.isoformat(), "days": days_to_ban, "becomes": "SEASONAL_BAN"},
+        "source": "State MFRA / CMFRI seasonal-ban calendars. Advisory — verify locally.",
+    }
+
+
+# =============================================================================
+# Catch Sustainability — "Blue Score" (Ocean Footprint)
+# =============================================================================
+#
+# A transparent 0-100 sustainability score per catch, built from signals that
+# already exist in the platform: species conservation status (IUCN Red List),
+# the fishing zone it came from (SFZ green/amber/red + bycatch risk), and catch
+# legality (seasonal ban / no-take zone). Indicative, not a certified
+# assessment — the components are returned so the score is explainable, not a
+# black box. Frameworks: IUCN Red List, MSC sustainability principles, FAO.
+
+# Real IUCN Red List statuses for the species OceanMind handles.
+IUCN_STATUS = {
+    "indian mackerel": "LC", "rastrelliger kanagurta": "LC",
+    "oil sardine": "LC", "sardinella longiceps": "LC",
+    "silver pomfret": "LC", "pampus argenteus": "LC",
+    "yellowfin tuna": "NT", "thunnus albacares": "NT",
+    "giant tiger prawn": "LC", "penaeus monodon": "LC",
+    "seer fish": "NT", "indo-pacific seer fish": "NT", "scomberomorus guttatus": "NT",
+    "hilsa": "LC", "hilsa shad": "LC", "tenualosa ilisha": "LC",
+    "barramundi": "LC", "asian sea bass": "LC", "lates calcarifer": "LC",
+    "bombay duck": "LC", "harpadon nehereus": "LC",
+    "rohu": "LC", "catla": "LC",
+    "mrigal carp": "VU", "mrigal": "VU", "cirrhinus cirrhosus": "VU",
+    "ribbonfish": "LC", "largehead hairtail": "LC",
+    "indian salmon": "LC", "threadfin": "LC",
+}
+_IUCN_SCORE = {"LC": 100, "DD": 70, "NT": 55, "VU": 30, "EN": 12, "CR": 3}
+_IUCN_LABEL = {"LC": "Least Concern", "DD": "Data Deficient", "NT": "Near Threatened",
+               "VU": "Vulnerable", "EN": "Endangered", "CR": "Critically Endangered"}
+_ZONE_SCORE = {"GREEN": 100, "AMBER": 55, "RED": 15}
+
+
+def _iucn_of(species_name: str) -> str:
+    return IUCN_STATUS.get((species_name or "").strip().lower(), "DD")
+
+
+def _legality(lat: float, lon: float, d: date) -> str:
+    """Reuses the compliance rules — no-take zone / seasonal ban / open."""
+    for z in NO_TAKE_ZONES:
+        if _compliance_haversine_km(lat, lon, z["lat"], z["lon"]) <= z["radius_km"]:
+            return "NO_TAKE"
+    sm, sd, em, ed = WEST_COAST_BAN if _coast_of(lon) == "west" else EAST_COAST_BAN
+    start = date(d.year, sm, sd)
+    end = date(d.year, em, ed)
+    return "SEASONAL_BAN" if start <= d <= end else "OPEN"
+
+
+def _score_catch(species_name, lat, lon, d, zone_class=None, bycatch_risk=None):
+    iucn = _iucn_of(species_name)
+    comps = [("species", 0.5, _IUCN_SCORE[iucn])]
+    if zone_class in _ZONE_SCORE:
+        comps.append(("zone", 0.3, _ZONE_SCORE[zone_class]))
+    if bycatch_risk is not None:
+        comps.append(("bycatch", 0.2, round(100 * (1 - max(0.0, min(1.0, bycatch_risk))))))
+    wsum = sum(w for _, w, _ in comps)
+    # Ecological sustainability score (species + zone + bycatch) — kept separate
+    # from legality so an LC species from a green zone isn't mislabelled just
+    # because of *when* it was caught. Legality is reported as its own dimension.
+    score = round(sum(w * v for _, w, v in comps) / wsum) if wsum else _IUCN_SCORE[iucn]
+    rating = "SUSTAINABLE" if score >= 70 else "MODERATE" if score >= 40 else "HIGH_IMPACT"
+
+    legal = _legality(lat, lon, d)
+    flag = None
+    if legal == "NO_TAKE":
+        flag = "Caught in a protected no-take area"
+    elif legal == "SEASONAL_BAN":
+        flag = "Caught during the closed season (monsoon ban)"
+
+    tips = []
+    if iucn in ("NT", "VU", "EN", "CR"):
+        tips.append(f"{_IUCN_LABEL[iucn]} species — release juveniles and keep the take modest.")
+    if zone_class == "RED":
+        tips.append("Caught in an avoid (red) zone — try a recommended green zone next trip.")
+    if flag:
+        tips.append(flag + ".")
+    if not tips:
+        tips.append("Sustainable choice — healthy species from a good zone.")
+
+    return {
+        "score": score,
+        "rating": rating,
+        "components": {name: val for name, _, val in comps},
+        "species_status": {"iucn": iucn, "label": _IUCN_LABEL[iucn]},
+        "legality": legal,
+        "compliant": legal == "OPEN",
+        "flag": flag,
+        "tips": tips,
+    }
+
+
+class FootprintScoreRequest(BaseModel):
+    species_name: str
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+    quantity_kg: float = Field(0, ge=0)
+    zone_class: Optional[str] = Field(None, description="GREEN / AMBER / RED if known")
+    bycatch_risk: Optional[float] = Field(None, ge=0, le=1)
+    date: Optional[str] = Field(None, description="ISO date; defaults to today")
+    trip_distance_km: Optional[float] = Field(None, description="Round-trip distance for optional fuel CO2")
+
+
+@app.post("/api/v1/footprint/score", tags=["Sustainability"])
+async def footprint_score(req: FootprintScoreRequest):
+    """Blue Score (0-100) for a single catch — species + zone + legality."""
+    d = date.fromisoformat(req.date) if req.date else date.today()
+    result = _score_catch(req.species_name, req.latitude, req.longitude, d, req.zone_class, req.bycatch_risk)
+    if req.trip_distance_km:
+        # ~3 L diesel per nmi (small boat), round trip, 2.68 kg CO2 per litre.
+        nmi = req.trip_distance_km / 1.852
+        result["trip_co2_kg"] = round(nmi * 2 * 3.0 * 2.68, 1)
+    result["source"] = "IUCN Red List + OceanMind SFZ + state ban calendars. Indicative, not certified."
+    return result
+
+
+@app.get("/api/v1/footprint/summary", tags=["Sustainability"])
+async def footprint_summary():
+    """Fleet / community footprint aggregated from the catch ledger."""
+    records = ledger.get_catch_history()
+    scored = []
+    for r in records:
+        try:
+            ts = r.get("event_timestamp")
+            d = datetime.fromisoformat(ts).date() if ts else date.today()
+        except Exception:
+            d = date.today()
+        scored.append((r, _score_catch(r.get("species_name", ""), r.get("latitude", 0.0), r.get("longitude", 0.0), d)))
+
+    n = len(scored)
+    if n == 0:
+        return {"total_catches": 0, "total_kg": 0, "avg_score": None, "ratings": {},
+                "green_share_pct": 0, "closed_season_catches": 0, "species_status": {}}
+
+    ratings = {"SUSTAINABLE": 0, "MODERATE": 0, "HIGH_IMPACT": 0}
+    status_mix: dict = {}
+    closed = 0
+    for _, s in scored:
+        ratings[s["rating"]] += 1
+        lbl = s["species_status"]["label"]
+        status_mix[lbl] = status_mix.get(lbl, 0) + 1
+        if s["legality"] in ("SEASONAL_BAN", "NO_TAKE"):
+            closed += 1
+
+    return {
+        "total_catches": n,
+        "total_kg": round(sum(r.get("quantity_kg", 0) for r, _ in scored), 1),
+        "avg_score": round(sum(s["score"] for _, s in scored) / n),
+        "ratings": ratings,
+        "green_share_pct": round(100 * ratings["SUSTAINABLE"] / n),
+        "closed_season_catches": closed,
+        "compliant_catches": n - closed,
+        "species_status": status_mix,
+        "source": "Scored from the catch ledger using IUCN status + state ban calendars.",
     }

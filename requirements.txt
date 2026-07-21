@@ -48,3 +48,8 @@ python-multipart==0.0.9
 aiofiles==23.2.1
 loguru==0.7.2
 rich==13.7.1
+
+# ── Live chlorophyll-a (Copernicus Marine Service) ──────────────────────────────
+# Needs COPERNICUSMARINE_USERNAME/PASSWORD in .env; the INCOIS pipeline falls
+# back to an estimate if credentials aren't set.
+copernicusmarine>=2.0.0
