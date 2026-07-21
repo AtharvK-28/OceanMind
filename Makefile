@@ -1,10 +1,15 @@
 .PHONY: help setup db api frontend dev test lint clean
 
-PYTHON  ?= python3
+PYTHON  ?= python
 VENV    := .venv
-PIP     := $(VENV)/bin/pip
-UV      := $(VENV)/bin/uvicorn
-ST      := $(VENV)/bin/streamlit
+# Windows venv uses Scripts\, Linux/macOS uses bin/
+ifeq ($(OS),Windows_NT)
+  PIP := $(VENV)/Scripts/pip
+  UV  := $(VENV)/Scripts/uvicorn
+else
+  PIP := $(VENV)/bin/pip
+  UV  := $(VENV)/bin/uvicorn
+endif
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -12,11 +17,14 @@ help: ## Show this help
 
 # ── Environment ───────────────────────────────────────────────────────────────
 
-setup: ## Create virtualenv and install dependencies
+setup: ## Create .venv and install all Python dependencies
 	$(PYTHON) -m venv $(VENV)
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
-	@echo "\nSetup complete. Activate with: source $(VENV)/bin/activate"
+	@echo ""
+	@echo "Setup complete! Activate your venv:"
+	@echo "  Windows (PowerShell): .venv\\Scripts\\Activate.ps1"
+	@echo "  Linux / macOS:        source .venv/bin/activate"
 
 env: ## Copy .env.example → .env (first-time setup)
 	@test -f .env || (cp .env.example .env && echo "Created .env — fill in your credentials")

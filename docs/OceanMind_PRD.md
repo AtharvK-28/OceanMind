@@ -275,9 +275,9 @@ Three items in the ideation document (v7.0) remain open pending human action and
 
 | Item | Action Required |
 |---|---|
-| OQ-025 — Landing-site CV Pilot | Initiate INCOIS conversation for Veraval pilot (mackerel + sardine, Oct–Dec). Pilot specification fully defined in Ideation v7.0 §12. |
-| OQ-018 Track B — Novel Genomics | Initiate CMFRI/CMLRE MOU for novel genomic and transcriptomic data generation. Begin Phase 2 for Phase 3 readiness. |
-| Section 18.2 — Official Biothon PS | Paste the exact official Biothon 2026 Environment & Biodiversity problem statement text for word-for-word alignment verification. |
+| OQ-025 — Landing-site CV Pilot | **Awaiting Human Execution (Post-Hackathon Phase)**: Initiate INCOIS conversation for Veraval pilot (mackerel + sardine, Oct–Dec). Pilot specification fully defined in Ideation v7.0 §12. |
+| OQ-018 Track B — Novel Genomics | **Awaiting Human Execution (Post-Hackathon Phase)**: Initiate CMFRI/CMLRE MOU for novel genomic and transcriptomic data generation. Begin Phase 2 for Phase 3 readiness. |
+| Section 18.2 — Official Biothon PS | **Awaiting Human Execution (Post-Hackathon Phase)**: Paste the exact official Biothon 2026 Environment & Biodiversity problem statement text for word-for-word alignment verification. |
 
 ---
 

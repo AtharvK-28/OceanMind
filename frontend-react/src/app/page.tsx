@@ -228,7 +228,7 @@ export default function FisherView() {
       ) : null}
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div className="bg-[#3a8c5f]/8 border border-[#3a8c5f]/15 rounded-xl p-3.5 text-center
                         transition-all hover:border-[#3a8c5f]/30">
           <div className="text-2xl font-bold text-[#3a8c5f]">{nearbyGreen}</div>

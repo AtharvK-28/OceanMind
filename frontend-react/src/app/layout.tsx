@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Sidebar from "@/components/layout/Sidebar";
 import { ToastProvider } from "@/components/ui/Toast";
 import DemoAlerts from "@/components/ui/DemoAlerts";
@@ -7,6 +7,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "OceanMind — Marine Intelligence",
   description: "AI-Driven Unified Marine Data Intelligence Platform",
+  manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0ea5e9",
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,      // Lower limit for dynamic scaling
+  maximumScale: 5,      // Upper limit for dynamic scaling
+  userScalable: true,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToastProvider>
           <DemoAlerts />
           <Sidebar />
-          <main className="flex-1 overflow-y-auto p-6 pt-16 lg:pt-6 max-w-[1280px]">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 lg:pt-6 max-w-[1280px]">
             {children}
           </main>
         </ToastProvider>
