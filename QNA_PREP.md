@@ -141,6 +141,33 @@ showing a live Swagger response is worth more than any slide. It returns Shannon
 
 ---
 
+## Q7. ⚠️ "Your app says GO — but it also says a fishing ban is active. Isn't that contradictory?"
+
+**A judge will see this on your Fisher View screen. Narrate it before they ask —
+it is a strength, but only if you frame it first.**
+
+> "Deliberate, and it's the more honest design. Those are two different questions.
+> The score — 75 — answers *'is the sea safe and productive today?'*, and it's
+> computed from live conditions. The ban answers *'am I legally allowed?'*, and it
+> comes from state closed-season calendars.
+>
+> We keep them separate because collapsing them would hide information from him.
+> If we showed a single AVOID, he learns nothing about conditions. Shown separately,
+> he knows the sea is fine *and* that he must wait 11 days — and the ban card is the
+> binding one. That's also why the label says *'advisory — confirm with local
+> authority'*: we're insight-only, we never claim legal authority.
+>
+> And the closed-season calendar isn't decorative — the Ocean Footprint scorer uses
+> it to grade logged catch, which is what makes the export certificate meaningful."
+
+**If they push — "so a fisher might still go?":**
+> "He might, and he can today with no information at all. What changes is that the
+> ban is now on the same screen as the weather he already checks, and his catch gets
+> scored against it on the ledger. That's a compliance nudge with an economic
+> consequence at the export end — which works better than a rule he never sees."
+
+---
+
 # 🟠 TIER 2 — Technical deep cuts
 
 ## "Why Isolation Forest for Marine Health? Why not a supervised model?"
@@ -272,11 +299,15 @@ showing a live Swagger response is worth more than any slide. It returns Shannon
 > recorded 94 events between 1982 and 2018."
 
 ## "What about bycatch and endangered species?"
-> "Each species carries IUCN Red List status, and the Ocean Footprint scorer grades
-> logged catch against IUCN status plus state closed-season calendars — right now
-> 79% of ledger catch scores sustainable. Bycatch risk overlay on the zone model is
-> specified but not in the MVP; honestly, doing it properly needs observer-programme
-> data, which is the hardest dataset to get in Indian fisheries."
+> "Three layers. Every zone carries a **bycatch risk score** — the one on screen is
+> 0.32, and it's part of the amber classification, not an afterthought. Every species
+> carries **IUCN Red List status**. And the Ocean Footprint scorer grades logged catch
+> against IUCN status plus **state closed-season calendars** — 79% of ledger catch
+> currently scores sustainable.
+>
+> The honest limit: bycatch risk is modelled from environmental covariates, not from
+> observer-programme data — which is the hardest dataset to get in Indian fisheries
+> and the thing I'd buy first with funding."
 
 ## "Isn't eDNA overkill for a fisheries app?"
 > "It's the opposite of overkill — it's the only method that sees what nets don't.

@@ -100,10 +100,14 @@ you know it better than the judges do.
 
 **[Action: gesture at the screen you're already on]**
 
-> "Same screen, now read it. **GO** — one word, decided from live sea state.
-> Wind, swell, water temperature, tide times — pulled live from the Open-Meteo
-> Marine API right now, not a cached demo file. Safe zones near his port, and a
-> sunset-based return time computed from his latitude."
+> "Same screen, now read it. **GO — fishing score 75.** One word, decided from live
+> sea state: wind, swell, water temperature, tides, pulled from the Open-Meteo Marine
+> API right now, not a cached file.
+>
+> But look underneath — **the monsoon ban is active, 11 days left.** The sea is fine
+> and the law says no. So it tells him both, and the ban wins. It also tells him this
+> trip burns **₹5,702 of fuel** — because the real question isn't 'are there fish',
+> it's 'is this trip worth it'."
 
 **[Action: switch port → Veraval]**
 
@@ -128,10 +132,12 @@ not a feature list.
 
 **[Action: click a zone → SHAP chart]**
 
-> "**SHAP feature attribution.** This zone is Green *because* chlorophyll-a drove
-> 40% of that decision, then the SST front. A fisher won't read this — but a
-> **fisheries officer closing a zone has to justify it**, and a black box can't be
-> defended in a policy hearing.
+> "**SHAP feature attribution.** 182 zones classified — 105 green, 68 amber, 9 red.
+> And this chart shows *why*: chlorophyll-a is the dominant driver, then sea surface
+> temperature, then fishing effort. Each zone also carries a **bycatch risk score**.
+>
+> A fisher won't read this — but a **fisheries officer closing a zone has to justify
+> it**, and a black box can't be defended in a policy hearing.
 >
 > This is the model explaining itself."
 

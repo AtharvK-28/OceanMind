@@ -67,7 +67,7 @@ export default function Sidebar() {
               : <><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></>}
           </svg>
         </button>
-        <i className="ph ph-wave-sine text-xl text-[#9fe0d6]" />
+        <img src="/logo-mark.png" alt="" className="w-5.5 h-5.5 shrink-0" />
         <span className="text-sm font-semibold text-[#f3f8f6] min-w-0 truncate">{currentPage?.label ?? "OceanMind"}</span>
         <div className="ml-auto flex-none flex items-center gap-2">
           <InstallButton />
@@ -90,8 +90,8 @@ export default function Sidebar() {
         {/* Brand */}
         <div className="px-[22px] pt-4 pb-3">
           <div className="flex items-center gap-[11px]">
-            <div className="w-[38px] h-[38px] rounded-[11px] bg-white/10 border border-white/[0.14] flex items-center justify-center text-[#9fe0d6]">
-              <i className="ph ph-wave-sine text-[21px]" />
+            <div className="w-[38px] h-[38px] rounded-[11px] bg-white/10 border border-white/[0.14] flex items-center justify-center">
+              <img src="/logo-mark.png" alt="" className="w-6.5 h-6.5" />
             </div>
             <div>
               <div className="text-[21px] font-semibold leading-none text-[#f3f8f6] tracking-tight" style={{ fontFamily: "'Newsreader', serif" }}>OceanMind</div>
