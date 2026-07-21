@@ -9,6 +9,28 @@ import TabGroup from "@/components/ui/TabGroup";
 import DataTable from "@/components/ui/DataTable";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import type { CVAnalyzeResponse, EDNAAnalyzeResponse, SpeciesReferenceResponse } from "@/types/api";
+import InsightCard from "@/components/ui/InsightCard";
+
+function interpretCV(speciesSummary: Record<string, number>): { severity: "good"|"watch"; headline: string; body: string } {
+  const entries = Object.entries(speciesSummary);
+  const total = entries.reduce((sum, [, c]) => sum + c, 0);
+  const top = entries.sort((a, b) => b[1] - a[1])[0];
+  return {
+    severity: "good",
+    headline: `Detected ${entries.length} species, ${total} individuals total.`,
+    body: top ? `${top[0]} was the most common in this catch (${top[1]} detected).` : "Upload a clearer photo for a full breakdown.",
+  };
+}
+
+function interpretEDNA(taxaCount: number, novelCount: number): { severity: "good"|"watch"; headline: string; body: string } {
+  return {
+    severity: novelCount > 0 ? "watch" : "good",
+    headline: `${taxaCount} taxa identified from this water sample.`,
+    body: novelCount > 0
+      ? `${novelCount} of these were not detected in prior visual surveys of this site — eDNA is catching biodiversity that traditional methods miss.`
+      : "All detected taxa match prior records for this site — a stable biodiversity signature.",
+  };
+}
 
 const PIE_COLORS = [
   "#1f7a8c", "#3a8c5f", "#d49a2e", "#c25a44", "#ab47bc", "#26a69a", "#ec407a", "#8d6e63",
@@ -67,7 +89,7 @@ export default function BiodiversityPage() {
     <div className="animate-page-enter">
       <HeroBanner
         title="Biodiversity & Computer Vision"
-        description="YOLOv8 landing-site fish detection + ResNet50 species classifier (13 Indian species). eDNA metabarcoding (1D CNN + BLAST+). WoRMS AphiaID entity resolution."
+        description={'What\'s actually in your catch or your water sample? Upload a photo or an eDNA read and get species identified in seconds. <span style="opacity:.6">YOLOv8 + ResNet50 CV · 1D CNN eDNA · WoRMS-validated</span>'}
       />
 
       <TabGroup tabs={[
@@ -163,6 +185,9 @@ export default function BiodiversityPage() {
           {cvLoading && <LoadingSpinner text="Running CV pipeline..." />}
           {cvResult && !cvLoading && (
             <>
+              <div className="mb-6">
+                <InsightCard {...interpretCV(cvResult.species_summary)} />
+              </div>
               <p className="text-[#3a8c5f] font-medium">Detected <b>{cvResult.total_fish_detected}</b> fish across <b>{Object.keys(cvResult.species_summary).length}</b> species
                 <span className="text-text-faint text-xs ml-2">({cvResult.model})</span>
               </p>
@@ -205,6 +230,9 @@ export default function BiodiversityPage() {
           {ednaLoading && <LoadingSpinner text="Running eDNA pipeline..." />}
           {ednaResult && !ednaLoading && (
             <>
+              <div className="mb-6">
+                <InsightCard {...interpretEDNA(ednaResult.species_detected, (ednaResult as any).novel_taxa ?? 0)} />
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <MetricCard label="Species Detected" value={ednaResult.species_detected} />
                 <MetricCard label="Total Reads" value={ednaResult.total_reads.toLocaleString()} />
