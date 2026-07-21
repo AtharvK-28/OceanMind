@@ -185,8 +185,9 @@ class SFZClassifier:
         if hasattr(self.explainer, "shap_values"):
             shap_values = self.explainer.shap_values(X)
         else:
-            explanation = self.explainer(X)
-            shap_values = explanation.values  # shape: (n_samples, n_features, n_classes)
+            # Fallback to fast global feature importances if TreeExplainer failed
+            global_fi = self.model.feature_importances_
+            shap_values = np.tile(global_fi, (len(X), 1))
         results = []
         for i, (pred, prob) in enumerate(zip(preds, probs)):
             class_name = self.label_encoder.inverse_transform([pred])[0]

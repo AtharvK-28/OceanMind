@@ -1,4 +1,5 @@
 import { signup } from '../login/actions'
+import { REGIONS } from '@/lib/constants'
 
 export default function SignupPage() {
   return (
@@ -17,6 +18,14 @@ export default function SignupPage() {
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
               <input id="password" name="password" type="password" required className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" />
+            </div>
+            <div>
+              <label htmlFor="region" className="block text-sm font-medium text-gray-700">Preferred Region</label>
+              <select id="region" name="region" required className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900">
+                {Object.keys(REGIONS).map((regionName) => (
+                  <option key={regionName} value={regionName}>{regionName}</option>
+                ))}
+              </select>
             </div>
           </div>
           <button type="submit" className="w-full px-4 py-2 font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">

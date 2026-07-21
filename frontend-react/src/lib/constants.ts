@@ -42,3 +42,11 @@ export const SUGGESTED_RAG_QUERIES = [
   "What does a RED fishing zone mean?",
   "Explain IUU fishing detection via AIS",
 ];
+
+export const REGIONS: Record<string, { lat: number; lng: number; zoom: number }> = {
+  "All India": { lat: 15, lng: 78, zoom: 5 },
+  "Gujarat Coast": { lat: 21.0, lng: 70.0, zoom: 7 },
+  "Kerala Coast": { lat: 10.0, lng: 76.0, zoom: 7 },
+  "Tamil Nadu Coast": { lat: 13.0, lng: 80.0, zoom: 7 },
+  "Andhra Pradesh Coast": { lat: 16.5, lng: 82.5, zoom: 7 },
+};

@@ -28,9 +28,16 @@ export async function signup(formData: FormData) {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
 
+  const region = formData.get('region') as string
+
   const data = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
+    options: {
+      data: {
+        region: region,
+      }
+    }
   }
 
   const { error } = await supabase.auth.signUp(data)

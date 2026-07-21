@@ -9,6 +9,8 @@ import os
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timezone, timedelta
 from typing import Optional
+from functools import wraps
+import time as _time
 
 import numpy as np
 import pandas as pd
@@ -20,6 +22,28 @@ from loguru import logger
 from dotenv import load_dotenv
 
 load_dotenv()
+
+_IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
+
+# ── Simple TTL in-memory cache ─────────────────────────────────────────────────
+_cache: dict[str, tuple[float, object]] = {}
+
+def cached(ttl_seconds: int):
+    """Decorator: cache the response of an endpoint for ttl_seconds."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            key = f"{func.__name__}:{args}:{kwargs}"
+            now = _time.monotonic()
+            if key in _cache:
+                expires, result = _cache[key]
+                if now < expires:
+                    return result
+            result = await func(*args, **kwargs)
+            _cache[key] = (now + ttl_seconds, result)
+            return result
+        return wrapper
+    return decorator
 
 import glob as globmod
 from backend.db.connection import check_db_connection, get_db, engine
@@ -507,22 +531,33 @@ async def lifespan(app: FastAPI):
     logger.info("OceanMind backend shutting down.")
 
 
+_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+_frontend_url = os.getenv("FRONTEND_URL", "")
+if _frontend_url:
+    _ALLOWED_ORIGINS.append(_frontend_url)
+
 app = FastAPI(
     title="OceanMind API",
     description=(
-        "AI-Driven Unified Marine Data Intelligence Platform — Biothon 2026\n\n"
+        "AI-Driven Unified Marine Data Intelligence Platform\n\n"
         "Integrates oceanographic, fisheries, and eDNA biodiversity data for "
         "real-time marine decision support across the Indian EEZ."
     ),
-    version="1.0.0-mvp",
+    version="1.0.0",
     lifespan=lifespan,
+    docs_url=None if _IS_PRODUCTION else "/docs",
+    redoc_url=None if _IS_PRODUCTION else "/redoc",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    allow_credentials=True,
 )
 
 # =============================================================================
@@ -583,10 +618,8 @@ class AlertSubscribeRequest(BaseModel):
 async def root():
     return {
         "service": "OceanMind API",
-        "version": "1.0.0-mvp",
+        "version": "1.0.0",
         "status": "operational",
-        "docs": "/docs",
-        "phase": "A-H MVP (Biothon 2026)",
     }
 
 
@@ -608,6 +641,7 @@ async def health():
 # =============================================================================
 
 @app.get("/api/v1/mhi/status", tags=["Marine Health Index"])
+@cached(ttl_seconds=60)
 async def mhi_status(
     lat_min: float = Query(5.0,  description="Bounding box min latitude"),
     lat_max: float = Query(25.0, description="Bounding box max latitude"),
@@ -713,6 +747,7 @@ async def mhi_score_single(req: MHIRequest):
 # =============================================================================
 
 @app.get("/api/v1/sfz/current", tags=["Sustainable Fishing Zones"])
+@cached(ttl_seconds=300)
 async def sfz_current(
     week_start: Optional[str] = Query(None, description="ISO date e.g. 2024-06-03"),
 ):
@@ -725,12 +760,13 @@ async def sfz_current(
         with engine.connect() as conn:
             ws = week_start or str(date.today())
             df = pd.read_sql(
-                f"""SELECT latitude, longitude, ecological_class,
+                """SELECT latitude, longitude, ecological_class,
                            bycatch_risk_score, shap_top3, week_start
                     FROM sfz_output
-                    WHERE week_start = '{ws}'
+                    WHERE week_start = :ws
                     LIMIT 500""",
                 conn,
+                params={"ws": ws},
             )
     except Exception:
         df = pd.DataFrame()
@@ -833,8 +869,10 @@ async def alerts_subscribe(req: AlertSubscribeRequest):
     return {"status": "subscribed", "sub_id": sub["sub_id"], "language": req.language}
 
 
-@app.get("/api/v1/alerts/trigger-demo", tags=["Alerts"])
+@app.get("/api/v1/alerts/trigger-demo", tags=["Alerts"], include_in_schema=not _IS_PRODUCTION)
 async def alerts_trigger_demo():
+    if _IS_PRODUCTION:
+        raise HTTPException(status_code=404, detail="Not found")
     """
     Demo endpoint: simulate a zone-change alert dispatch.
     Phase 2: connects to Twilio SMS and Firebase FCM.
@@ -1034,12 +1072,14 @@ async def trace_verify(transaction_id: str):
 
 
 @app.get("/api/v1/trace/chain-summary", tags=["Blockchain Traceability"])
+@cached(ttl_seconds=300)
 async def trace_chain_summary():
     """Mock ledger chain statistics."""
     return ledger.get_chain_summary()
 
 
 @app.get("/api/v1/trace/history", tags=["Blockchain Traceability"])
+@cached(ttl_seconds=60)
 async def trace_history(landing_site: Optional[str] = Query(None)):
     """Catch history, optionally filtered by landing site."""
     return {"records": ledger.get_catch_history(landing_site), "total": len(ledger._chain)}
@@ -1080,11 +1120,12 @@ async def data_bubble(bubble_id: int = Query(..., description="Data bubble ID"))
                 LEFT JOIN gfw_ais          g ON g.bubble_id = b.bubble_id
                 LEFT JOIN edna_occurrences e ON e.bubble_id = b.bubble_id
                 LEFT JOIN landing_site_cv  c ON c.bubble_id = b.bubble_id
-                WHERE b.bubble_id = {bubble_id}
+                WHERE b.bubble_id = :bid
                 GROUP BY b.bubble_id, b.radius_km, b.time_window_start,
                          b.time_window_end, b.geom
                 """,
                 conn,
+                params={"bid": bubble_id},
             )
         if result.empty:
             raise HTTPException(status_code=404, detail=f"Bubble {bubble_id} not found.")

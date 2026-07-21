@@ -32,11 +32,17 @@ export default function SFZPage() {
     const [lng, lat] = f.geometry.coordinates;
     const zone = f.properties.ecological_class;
     const risk = f.properties.bycatch_risk_score;
-    const shap = (f.properties.shap_top3 ?? []).map((s: SHAPEntry) => s.feature).join(", ");
+    const shap = (f.properties.shap_top3 ?? []).map((s: SHAPEntry) => s.feature.replace(/_/g, " ")).join(", ");
+    
+    let actionText = "";
+    if (zone === "GREEN") actionText = "Safe to fish. Favorable conditions.";
+    else if (zone === "AMBER") actionText = "Proceed with caution. Check bycatch risks.";
+    else actionText = "Avoid this zone. High ecological stress.";
+
     return {
       lat, lng, color: sfzFoliumColor(zone),
-      tooltip: `${zone} | Risk: ${risk.toFixed(2)}`,
-      popup: `<b>Zone:</b> ${zone}<br><b>Risk:</b> ${risk.toFixed(2)}<br><b>SHAP:</b> ${shap || "—"}`,
+      tooltip: `${zone} | Action: ${actionText}`,
+      popup: `<b>Zone:</b> ${zone}<br><b>Action:</b> ${actionText}<br><b>Bycatch Risk:</b> ${risk.toFixed(2)}<br><b>Drivers:</b> ${shap || "—"}`,
     };
   });
 
