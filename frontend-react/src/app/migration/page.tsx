@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import GlobeContainer, { type MigrationArc, type MigrationPoint } from "@/components/maps/GlobeContainer";
 import FishingCalendar from "@/components/ui/FishingCalendar";
 
@@ -145,6 +145,10 @@ export default function MigrationPage() {
   const [selectedId, setSelectedId] = useState<string | "all">("sardine");
   const [showCurrents, setShowCurrents] = useState(true);
   const [rotating, setRotating] = useState(true);
+  // Honour reduced-motion: don't auto-spin the globe for users who opt out.
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setRotating(false);
+  }, []);
   const [climateShift, setClimateShift] = useState(0); // 0, 1, or 2 degrees
   const [month, setMonth] = useState(new Date().getMonth());
   const [panelOpen, setPanelOpen] = useState(true);
@@ -197,7 +201,7 @@ export default function MigrationPage() {
     }
 
     return result;
-  }, [activeSpecies, showCurrents, month]);
+  }, [activeSpecies, showCurrents, month, climateShift]);
 
   const points: MigrationPoint[] = useMemo(() => {
     return activeSpecies.flatMap(sp => {

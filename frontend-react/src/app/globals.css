@@ -149,3 +149,26 @@ input[type="range"]::-webkit-slider-thumb {
 }
 input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 0 12px rgba(31,122,140,0.45); }
 input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--color-accent); cursor: pointer; border: none; }
+
+/* Visible keyboard focus — shown only for keyboard/switch users (:focus-visible),
+   never on mouse click. Custom buttons/links relied on the removed default ring. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+input[type="range"]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+
+/* Respect users who prefer reduced motion (vestibular sensitivity). Keep the
+   UI functional but calm: near-instant transitions, no looping animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-page-enter,
+  .animate-stagger > *,
+  .animate-data-enter,
+  .animate-number { opacity: 1 !important; transform: none !important; }
+}

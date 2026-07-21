@@ -7,16 +7,24 @@ import { sfzFoliumColor, sfzColor } from "@/lib/colors";
 import HeroBanner from "@/components/ui/HeroBanner";
 import MetricCard from "@/components/ui/MetricCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import ErrorState from "@/components/ui/ErrorState";
 import ResultBadge from "@/components/ui/ResultBadge";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import type { SFZCurrentResponse, SFZClassifyResponse, SHAPEntry } from "@/types/api";
 
 export default function SFZPage() {
-  const { data, isLoading } = useSWR<SFZCurrentResponse>("/api/v1/sfz/current", fetcher);
+  const { data, isLoading, error, mutate } = useSWR<SFZCurrentResponse>("/api/v1/sfz/current", fetcher);
   const summary = data?.zone_summary ?? {};
 
   const [form, setForm] = useState({ latitude: 12, longitude: 74, sst_c: 28.5, chlorophyll_mgl: 0.3, ssh_anomaly: 0, mld_m: 50, fishing_effort_h: 2, wind_stress_curl: 0 });
+
+  const FIELD_LABELS: Record<string, string> = {
+    latitude: "Latitude", longitude: "Longitude", sst_c: "SST (°C)",
+    chlorophyll_mgl: "Chlorophyll-a (mg/L)", ssh_anomaly: "SSH anomaly (m)",
+    mld_m: "Mixed layer depth (m)", fishing_effort_h: "Fishing effort (h)",
+    wind_stress_curl: "Wind stress curl",
+  };
   const [result, setResult] = useState<SFZClassifyResponse | null>(null);
   const [classifying, setClassifying] = useState(false);
 
@@ -61,13 +69,13 @@ export default function SFZPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard label="GREEN" value={summary.GREEN ?? 0} />
-        <MetricCard label="AMBER" value={summary.AMBER ?? 0} />
-        <MetricCard label="RED" value={summary.RED ?? 0} />
+        <MetricCard label="GREEN" value={summary.GREEN ?? 0} valueColor="#3a8c5f" />
+        <MetricCard label="AMBER" value={summary.AMBER ?? 0} valueColor="#d49a2e" />
+        <MetricCard label="RED" value={summary.RED ?? 0} valueColor="#c25a44" />
         <MetricCard label="Total Zones" value={data?.total_zones ?? 0} />
       </div>
 
-      {isLoading ? <LoadingSpinner text="Loading SFZ zones..." /> : (
+      {error ? <ErrorState message="Couldn't load fishing zones" onRetry={() => mutate()} /> : isLoading ? <LoadingSpinner text="Loading SFZ zones..." /> : (
         <div className="relative animate-data-enter">
           <MapContainer height="480px" points={mapPoints} />
           <MapLegend title="Fishing Zone" items={[
@@ -87,7 +95,7 @@ export default function SFZPage() {
               <XAxis type="number" tick={{ fill: "#8a9698", fontSize: 11 }} />
               <YAxis type="category" dataKey="name" width={130} tick={{ fill: "#6d7e80", fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="count" fill="#26a69a" radius={[0, 6, 6, 0]} />
+              <Bar dataKey="count" fill="#26a69a" radius={[0, 6, 6, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -99,7 +107,7 @@ export default function SFZPage() {
         <form onSubmit={handleClassify} className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(form).map(([key, val]) => (
             <label key={key} className="block">
-              <span className="text-xs text-text-muted">{key.replace(/_/g, " ")}</span>
+              <span className="text-xs text-text-muted">{FIELD_LABELS[key] ?? key.replace(/_/g, " ")}</span>
               <input type="number" step="0.1" value={val}
                 onChange={(e) => setForm({ ...form, [key]: parseFloat(e.target.value) || 0 })}
                 className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2 text-sm text-text" />

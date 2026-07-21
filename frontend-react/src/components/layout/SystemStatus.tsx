@@ -19,9 +19,10 @@ export default function SystemStatus() {
         <span className="text-[10px] tracking-[0.08em] text-[rgba(220,235,233,0.75)]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>SYSTEMS ONLINE</span>
       </div>
       <div className="flex gap-[6px]">
-        <span className={`flex-1 text-center text-[9px] py-1 rounded-[6px] ${dbOk ? "bg-[rgba(143,211,200,0.12)] text-[#9fe0d6]" : "bg-[rgba(194,90,68,0.15)] text-[#e8887a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>API</span>
-        <span className={`flex-1 text-center text-[9px] py-1 rounded-[6px] ${dbOk ? "bg-[rgba(143,211,200,0.12)] text-[#9fe0d6]" : "bg-[rgba(194,90,68,0.15)] text-[#e8887a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>PostGIS</span>
-        <span className={`flex-1 text-center text-[9px] py-1 rounded-[6px] ${mhiOk && sfzOk ? "bg-[rgba(143,211,200,0.12)] text-[#9fe0d6]" : "bg-[rgba(212,154,46,0.15)] text-[#d4a43a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Models</span>
+        <span className="flex-1 text-center text-[9px] py-1 rounded-md bg-[rgba(143,211,200,0.12)] text-accent-light" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>API</span>
+        <span title={dbOk ? "PostGIS connected" : "PostGIS offline — synthetic fallback active"}
+          className={`flex-1 text-center text-[9px] py-1 rounded-md ${dbOk ? "bg-[rgba(143,211,200,0.12)] text-accent-light" : "bg-[rgba(212,154,46,0.15)] text-[#d4a43a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{dbOk ? "PostGIS" : "Fallback"}</span>
+        <span className={`flex-1 text-center text-[9px] py-1 rounded-md ${mhiOk && sfzOk ? "bg-[rgba(143,211,200,0.12)] text-accent-light" : "bg-[rgba(212,154,46,0.15)] text-[#d4a43a]"}`} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Models</span>
       </div>
     </div>
   );

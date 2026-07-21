@@ -11,6 +11,7 @@ export interface MarkerPoint {
   fillOpacity?: number;
   tooltip?: string;
   popup?: string;
+  onClick?: () => void;
 }
 
 interface Props {
@@ -29,7 +30,9 @@ function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }
 }
 
 function thinPoints(points: MarkerPoint[], zoomLevel: number): MarkerPoint[] {
-  if (zoomLevel >= 7) return points;
+  // Only thin dense layers (e.g. the SFZ grid). Small sets like community
+  // catches always render in full so none go missing.
+  if (points.length <= 60 || zoomLevel >= 7) return points;
   const step = zoomLevel <= 5 ? 4 : 2;
   return points.filter((_, i) => i % step === 0);
 }
@@ -52,7 +55,8 @@ function AdaptiveMarkers({ points }: { points: MarkerPoint[] }) {
           key={`${p.lat}-${p.lng}-${p.color}-${i}`}
           center={[p.lat, p.lng]}
           radius={p.radius ?? markerRadius}
-          pathOptions={{ color: p.color, fillColor: p.color, fillOpacity: p.fillOpacity ?? 0.65, weight: 1 }}
+          pathOptions={{ color: p.color, fillColor: p.color, fillOpacity: p.fillOpacity ?? 0.65, weight: 1, className: p.onClick ? "cursor-pointer" : undefined }}
+          eventHandlers={p.onClick ? { click: p.onClick } : undefined}
         >
           {p.tooltip && <Tooltip>{p.tooltip}</Tooltip>}
           {p.popup && <Popup><div dangerouslySetInnerHTML={{ __html: p.popup }} /></Popup>}

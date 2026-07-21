@@ -3,46 +3,86 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { fetcher } from "@/lib/api";
+import { fetcher, apiPost } from "@/lib/api";
 import { sfzFoliumColor } from "@/lib/colors";
 import MetricCard from "@/components/ui/MetricCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { SkeletonMap } from "@/components/ui/Skeleton";
+import ErrorState from "@/components/ui/ErrorState";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
+import LedgerFeed from "@/components/ui/LedgerFeed";
 import type { MHIStatusResponse, SFZCurrentResponse, ChainSummaryResponse, SHAPEntry } from "@/types/api";
 
 const ZONE_COLORS: Record<string, string> = { GREEN: "#3a8c5f", AMBER: "#d49a2e", RED: "#c25a44" };
 const cardShadow = "0 1px 2px rgba(23,48,57,0.04), 0 12px 30px rgba(23,48,57,0.04)";
 
-const ZONE_NAMES: Record<string, { name: string; desc: string; sst: string; dist: string }> = {
-  "20.9,69.5": { name: "Veraval Bank", desc: "Strong sardine–mackerel signal on the Saurashtra shelf. Sustainable to fish.", sst: "27.4°", dist: "12" },
-  "9.97,75.8": { name: "Kochi Shelf", desc: "Calm seas and productive upwelling band. Peak mackerel returns expected.", sst: "28.6°", dist: "14" },
-  "12.87,74.5": { name: "Mangalore Bank", desc: "Productive upwelling band. Strong mackerel returns expected at dawn.", sst: "28.1°", dist: "9" },
-  "17.7,83.5": { name: "Vizag Deep", desc: "Good tuna outlook along the canyon edge. Steady winds forecast.", sst: "28.3°", dist: "21" },
+// Human-readable names for known shelf locations — a label only, no asserted
+// conditions. Everything else on the card comes from live model/API values.
+const ZONE_NAMES: Record<string, string> = {
+  "20.9,69.5": "Veraval Bank",
+  "9.97,75.8": "Kochi Shelf",
+  "12.87,74.5": "Mangalore Bank",
+  "17.7,83.5": "Vizag Deep",
+};
+
+// Short labels for the SFZ model's SHAP feature keys.
+const FEATURE_LABEL: Record<string, string> = {
+  sst_c: "SST", chlorophyll_mgl: "Chl-a", ssh_anomaly: "SSH", mld_m: "MLD",
+  fishing_effort_h: "Effort", wind_stress_curl: "Wind curl", salinity_psu: "Salinity",
 };
 
 export default function Dashboard() {
   const router = useRouter();
   const { data: mhi } = useSWR<MHIStatusResponse>("/api/v1/mhi/status", fetcher, { refreshInterval: 30000 });
-  const { data: sfz, isLoading: sfzLoading } = useSWR<SFZCurrentResponse>("/api/v1/sfz/current", fetcher, { refreshInterval: 30000 });
+  const { data: sfz, isLoading: sfzLoading, error: sfzError, mutate: mutateSfz } = useSWR<SFZCurrentResponse>("/api/v1/sfz/current", fetcher, { refreshInterval: 30000 });
   const { data: chain } = useSWR<ChainSummaryResponse>("/api/v1/trace/chain-summary", fetcher, { refreshInterval: 10000 });
 
   const [secs, setSecs] = useState(0);
   useEffect(() => { const t = setInterval(() => setSecs(s => (s >= 59 ? 1 : s + 1)), 1000); return () => clearInterval(t); }, []);
 
-  // Find first GREEN zone from real SFZ data
-  const firstGreen = sfz?.geojson.features.find(f => f.properties.ecological_class === "GREEN");
-  const greenCoords = firstGreen ? `${firstGreen.geometry.coordinates[1].toFixed(1)},${firstGreen.geometry.coordinates[0].toFixed(1)}` : null;
-  const greenMatch = greenCoords ? Object.entries(ZONE_NAMES).find(([k]) => {
-    const [kLat, kLon] = k.split(",").map(Number);
-    const [gLat, gLon] = greenCoords.split(",").map(Number);
-    return Math.abs(kLat - gLat) < 2 && Math.abs(kLon - gLon) < 2;
-  }) : null;
-  const topZone = greenMatch ? greenMatch[1] : { name: "Kochi Shelf", desc: "Calm seas and productive upwelling. Sustainable to fish.", sst: "28.6°", dist: "14" };
+  // Real live SST from Open-Meteo (representative Kochi shelf point) — was hardcoded "28.6"
+  const [liveSst, setLiveSst] = useState<number | null>(null);
+  useEffect(() => {
+    apiPost<{ advisory: { current: { sst_c: number | null }; sst_trend_c: number | null } }>(
+      "/api/v1/fishing/advisory", { lat: 9.5, lon: 75.5, site_name: "Kochi Shelf" }
+    ).then((r) => setLiveSst(r.advisory.current.sst_c)).catch(() => setLiveSst(null));
+  }, []);
+
+  // Lowest-bycatch GREEN zone from real SFZ data — everything shown is either
+  // a curated place name, a live SST reading, or a real model output.
+  const greenZones = (sfz?.geojson.features ?? []).filter(f => f.properties.ecological_class === "GREEN");
+  const firstGreen = greenZones.reduce<typeof greenZones[number] | undefined>(
+    (best, f) => (!best || f.properties.bycatch_risk_score < best.properties.bycatch_risk_score ? f : best),
+    undefined
+  );
+  const gLat = firstGreen ? firstGreen.geometry.coordinates[1] : null;
+  const gLon = firstGreen ? firstGreen.geometry.coordinates[0] : null;
+  const greenName = gLat != null && gLon != null
+    ? Object.entries(ZONE_NAMES).find(([k]) => {
+        const [kLat, kLon] = k.split(",").map(Number);
+        return Math.abs(kLat - gLat) < 2 && Math.abs(kLon - gLon) < 2;
+      })?.[1]
+    : undefined;
+  const topName = greenName ?? (gLat != null && gLon != null ? `Green zone ${gLat.toFixed(1)}°N ${gLon.toFixed(1)}°E` : "No green zone");
+  const topRisk = firstGreen ? firstGreen.properties.bycatch_risk_score : null;
+  const topDrivers = (firstGreen?.properties.shap_top3 ?? []).map(s => FEATURE_LABEL[s.feature] ?? s.feature);
 
   const mhiTotal = mhi?.total_cells ?? 0;
   const mhiAlerts = mhi?.alerts_active ?? 0;
+
+  // Real mean MHI across the grid (was hardcoded "72")
+  const mhiCells = mhi?.grid_cells ?? [];
+  const mhiMean = mhiCells.length
+    ? Math.round(mhiCells.reduce((sum, c) => sum + c.mhi_score, 0) / mhiCells.length)
+    : null;
+  // Real stress split for the mini-distribution (replaces the fabricated sparkline)
+  const stressSplit = ["NORMAL", "WATCH", "WARNING", "CRITICAL"].map((level) => ({
+    level,
+    count: mhiCells.filter((c) => c.stress_level === level).length,
+  }));
+  const stressColors: Record<string, string> = { NORMAL: "#3a8c5f", WATCH: "#d98b4a", WARNING: "#d49a2e", CRITICAL: "#c25a44" };
+
   const summary = sfz?.zone_summary ?? {};
   const sfzGreen = summary.GREEN ?? 0;
   const sfzAmber = summary.AMBER ?? 0;
@@ -84,8 +124,8 @@ export default function Dashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-[22px] animate-stagger">
-        <MetricCard label="Marine Health Index" value={mhiTotal ? "72" : "—"} icon="ph ph-heartbeat" delta="Stable · +2 vs last week" deltaColor="green" />
-        <MetricCard label="Sea Surface Temp" value="28.6" icon="ph ph-thermometer-simple" delta="+0.4° anomaly · watch" deltaColor="amber" />
+        <MetricCard label="Marine Health Index" value={mhiMean ?? "—"} icon="ph ph-heartbeat" delta={mhiMean != null ? `Mean of ${mhiTotal} grid cells` : "Loading…"} deltaColor="green" />
+        <MetricCard label="Sea Surface Temp" value={liveSst != null ? liveSst.toFixed(1) : "—"} icon="ph ph-thermometer-simple" delta={liveSst != null ? "Live · Open-Meteo (Kochi shelf)" : "Loading…"} deltaColor="green" />
         <MetricCard label="Green Zones Today" value={sfzGreen || "—"} icon="ph ph-map-trifold" delta={`${greenPct}% recommended to fish`} deltaColor="green" />
         <MetricCard label="Active Stress Alerts" value={mhiAlerts} icon="ph ph-warning" delta={`${mhiAlerts} cells stressed`} deltaColor="red" />
       </div>
@@ -104,7 +144,7 @@ export default function Dashboard() {
               </div>
               <span className="text-[9.5px] tracking-[0.06em] text-[#9aa6a7] bg-card-hover border border-card-border px-[9px] py-[5px] rounded-lg" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>ARGO · INCOIS · GFW</span>
             </div>
-            {sfzLoading ? <div className="mx-[14px] mb-[14px]"><SkeletonMap /></div> : (
+            {sfzError ? <div className="mx-[14px] mb-[14px]"><ErrorState message="Couldn't load fishing zones" onRetry={() => mutateSfz()} compact /></div> : sfzLoading ? <div className="mx-[14px] mb-[14px]"><SkeletonMap /></div> : (
               <div className="mx-[14px] mb-[14px] animate-data-enter relative">
                 <MapContainer height="340px" points={mapPoints} />
                 <MapLegend title="" items={[
@@ -150,21 +190,35 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* MHI Trend */}
+            {/* MHI — real mean + live stress distribution */}
             <div className="bg-white border border-card-border rounded-2xl p-[18px]" style={{ boxShadow: cardShadow }}>
               <div className="flex items-baseline justify-between">
                 <h3 className="m-0 text-[16px] font-semibold text-[#16323a]" style={{ fontFamily: "'Newsreader', serif" }}>Marine Health Index</h3>
-                <span className="text-[11px] text-[#2f6f4c] font-semibold">+2 wk</span>
+                <span className="text-[10px] text-[#9aa6a7]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{mhiTotal} cells</span>
               </div>
               <div className="flex items-baseline gap-[5px] mt-2">
-                <span className="text-[30px] font-semibold text-[#16323a] leading-none" style={{ fontFamily: "'Newsreader', serif" }}>72</span>
-                <span className="text-[12px] text-[#9aa6a7]">/ 100 · Stable</span>
+                <span className="text-[30px] font-semibold text-[#16323a] leading-none" style={{ fontFamily: "'Newsreader', serif" }}>{mhiMean ?? "—"}</span>
+                <span className="text-[12px] text-[#9aa6a7]">/ 100 · grid mean</span>
               </div>
-              <svg viewBox="0 0 240 64" className="w-full mt-[10px] overflow-visible" style={{ height: 64 }}>
-                <polyline points="2,64 2,36.0 23.6,28.0 45.3,44.0 66.9,20.0 88.5,8.0 110.2,16.0 131.8,4.0 153.5,8.0 175.1,0.0 196.7,16.0 218.4,4.0 238,8.0 238,64" fill="#eaf3ef" stroke="none" />
-                <polyline points="2,36.0 23.6,28.0 45.3,44.0 66.9,20.0 88.5,8.0 110.2,16.0 131.8,4.0 153.5,8.0 175.1,0.0 196.7,16.0 218.4,4.0 238,8.0" fill="none" stroke="#3a8c5f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <div className="flex justify-between text-[8.5px] text-[#b0b9b9] mt-[2px]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}><span>W14</span><span>W26</span></div>
+              {/* Real stress-level distribution bar */}
+              {mhiCells.length > 0 && (
+                <>
+                  <div className="flex h-[10px] rounded-full overflow-hidden mt-[14px] bg-[#eee7d8]">
+                    {stressSplit.map((s) => s.count > 0 && (
+                      <div key={s.level} title={`${s.level}: ${s.count}`}
+                        style={{ width: `${(s.count / mhiCells.length) * 100}%`, background: stressColors[s.level] }} />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-[10px]">
+                    {stressSplit.map((s) => (
+                      <span key={s.level} className="flex items-center gap-[5px] text-[10px] text-[#46585b]">
+                        <span className="w-[8px] h-[8px] rounded-[2px]" style={{ background: stressColors[s.level] }} />
+                        {s.level[0] + s.level.slice(1).toLowerCase()} <b className="text-[#16323a]">{s.count}</b>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -177,18 +231,22 @@ export default function Dashboard() {
               <i className="ph-fill ph-sun-horizon text-[18px] text-[#d98b4a]" />
               <span className="text-[10px] tracking-[0.12em] uppercase text-[#b08043]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Good fishing today</span>
             </div>
-            <div className="text-[23px] font-semibold text-[#16323a] leading-tight" style={{ fontFamily: "'Newsreader', serif" }}>{topZone.name}</div>
+            <div className="text-[23px] font-semibold text-[#16323a] leading-tight" style={{ fontFamily: "'Newsreader', serif" }}>{topName}</div>
             <div className="inline-flex items-center gap-[6px] mt-[9px] px-[11px] py-[5px] rounded-full bg-zone-green-bg border border-[#cfe6dd]">
               <span className="w-[7px] h-[7px] rounded-full bg-zone-green" />
               <span className="text-[11.5px] font-semibold text-[#2f6f4c]">GREEN · Recommended</span>
             </div>
-            <p className="mt-[14px] mb-0 text-[13.5px] leading-[1.55] text-[#52636a]">{topZone.desc}</p>
+            <p className="mt-[14px] mb-0 text-[13.5px] leading-[1.55] text-[#52636a]">
+              {firstGreen
+                ? <>Lowest-bycatch GREEN zone in this week&apos;s classifier run{topDrivers.length > 0 && <> · key drivers: {topDrivers.join(", ")}</>}.</>
+                : "No GREEN zones in the current classifier run."}
+            </p>
 
             <div className="grid grid-cols-3 gap-[10px] mt-4">
               {[
-                { icon: "ph ph-thermometer-simple", value: topZone.sst, label: "SEA TEMP" },
-                { icon: "ph ph-fish", value: "High", label: "CATCH ODDS" },
-                { icon: "ph ph-navigation-arrow", value: topZone.dist, label: "NAUT. MILES" },
+                { icon: "ph ph-thermometer-simple", value: liveSst != null ? `${liveSst.toFixed(1)}°` : "—", label: "SEA TEMP" },
+                { icon: "ph ph-shield-check", value: topRisk != null ? `${(topRisk * 100).toFixed(0)}%` : "—", label: "BYCATCH RISK" },
+                { icon: "ph ph-chart-bar", value: topDrivers[0] ?? "—", label: "KEY DRIVER" },
               ].map((s) => (
                 <div key={s.label} className="text-center p-[11px] rounded-xl bg-card-hover border border-card-border">
                   <i className={`${s.icon} text-[17px] text-[#2a6f7c]`} />
@@ -216,28 +274,7 @@ export default function Dashboard() {
                 <i className="ph ph-shield-check text-[13px]" /> verified
               </span>
             </div>
-            <div className="flex flex-col">
-              {[
-                { species: "Indian Mackerel", site: "Veraval, GJ", time: "07:42", kg: "210 kg", hash: "0x9f3a…b2" },
-                { species: "Oil Sardine", site: "Kochi, KL", time: "07:18", kg: "164 kg", hash: "0x41c8…7e" },
-                { species: "Yellowfin Tuna", site: "Vizag, AP", time: "06:55", kg: "88 kg", hash: "0xa7d0…1f" },
-                { species: "Giant Tiger Prawn", site: "Mangalore, KA", time: "06:31", kg: "52 kg", hash: "0x2be9…c4" },
-              ].map((l, i) => (
-                <div key={i} className="flex items-center gap-3 py-[11px] border-t border-[#f0ebdf]">
-                  <span className="w-[34px] h-[34px] flex-none rounded-[9px] bg-zone-green-bg text-[#2a6f7c] flex items-center justify-center">
-                    <i className="ph ph-fish-simple text-[16px]" />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-[#1d3b43]">{l.species}</div>
-                    <div className="text-[11px] text-text-muted">{l.site} · {l.time}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[12.5px] text-[#16323a]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{l.kg}</div>
-                    <div className="text-[9.5px] text-text-faint" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{l.hash}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <LedgerFeed limit={4} />
           </div>
         </div>
       </div>

@@ -122,7 +122,7 @@ export default function RAGPage() {
           <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
             <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Knowledge base</h3>
             {[
-              { icon: "ph ph-brain", label: "LLM", value: "Llama-3 8B" },
+              { icon: "ph ph-brain", label: "LLM", value: result?.model_used ?? "Llama-3.3 70B" },
               { icon: "ph ph-database", label: "Vector store", value: "FAISS" },
               { icon: "ph ph-link-simple", label: "Embeddings", value: "all-MiniLM-L6" },
               { icon: "ph ph-shield-check", label: "Provenance", value: "Full tracing" },
@@ -138,19 +138,22 @@ export default function RAGPage() {
           </div>
 
           <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
-            <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Data sources</h3>
+            <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>What it retrieves from</h3>
+            <p className="text-[10.5px] text-text-faint mb-3">Curated reference snippets + the project&apos;s own docs, indexed in FAISS — static knowledge, not live data feeds. Each answer cites the source it came from.</p>
+            <div className="text-[9.5px] uppercase tracking-[0.08em] text-text-muted mb-1.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Domain facts (attributed)</div>
             {[
-              { name: "INCOIS", desc: "SST, Chlorophyll, PFZ advisories" },
-              { name: "CMFRI", desc: "Fish catch statistics, species data" },
-              { name: "ARGO", desc: "Ocean profiles, T/S/O2" },
-              { name: "GFW", desc: "AIS fishing vessel tracking" },
-              { name: "WoRMS", desc: "Species taxonomy, AphiaIDs" },
+              { name: "INCOIS", desc: "SST, chlorophyll, PFZ advisories" },
+              { name: "ARGO", desc: "Ocean profiles, T/S/O₂" },
+              { name: "GFW", desc: "AIS fishing-effort context" },
+              { name: "WoRMS/CMFRI", desc: "Taxonomy & catch statistics" },
             ].map((src) => (
               <div key={src.name} className="flex items-center gap-3 py-2 border-t border-[#f0ebdf] first:border-0">
-                <span className="w-[34px] h-[22px] flex-none rounded-[5px] bg-card-hover text-[9px] font-medium text-text-muted flex items-center justify-center" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{src.name}</span>
+                <span className="w-[70px] h-[22px] flex-none rounded-[5px] bg-card-hover text-[9px] font-medium text-text-muted flex items-center justify-center" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{src.name}</span>
                 <span className="text-[12px] text-text-secondary">{src.desc}</span>
               </div>
             ))}
+            <div className="text-[9.5px] uppercase tracking-[0.08em] text-text-muted mt-3 mb-1.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Project documents</div>
+            <p className="text-[11.5px] text-text-secondary">PRD, TRD, Implementation Plan & README — split by section for section-level citations.</p>
           </div>
 
           {result && (

@@ -13,10 +13,11 @@ export default function AlertsPage() {
   const [subForm, setSubForm] = useState({ phone: "", device_token: "", language: "en", alert_types: ["zone_change", "mhw", "cyclone"] });
   const [subResult, setSubResult] = useState<Record<string, unknown> | null>(null);
   const [subError, setSubError] = useState("");
+  const [showDevOpts, setShowDevOpts] = useState(false);
 
   async function handleSubscribe(e: React.FormEvent) {
     e.preventDefault(); setSubError("");
-    if (!subForm.phone && !subForm.device_token) { setSubError("Provide at least a phone number or FCM token."); return; }
+    if (!subForm.phone && !subForm.device_token) { setSubError("Enter your mobile number to get alerts."); return; }
     const res = await apiPost<Record<string, unknown>>("/api/v1/alerts/subscribe", {
       phone: subForm.phone || null, device_token: subForm.device_token || null,
       language: subForm.language, alert_types: subForm.alert_types,
@@ -34,20 +35,26 @@ export default function AlertsPage() {
   }
 
   const alertTypes = ["zone_change", "mhw", "cyclone", "mhi_threshold"];
+  const ALERT_TYPE_LABELS: Record<string, string> = {
+    zone_change: "Zone change",
+    mhw: "Marine heatwave",
+    cyclone: "Cyclone",
+    mhi_threshold: "MHI threshold",
+  };
 
   return (
     <div className="animate-page-enter">
       <HeroBanner
         title="Alerts & Subscriptions"
-        description="<b>Phase F:</b> Zone-change SMS (Twilio) + Firebase FCM push. Bhashini voice alerts in <b>Hindi + Tamil</b>. &lt; 60s delivery SLA."
+        description="The subscription registry is live — zone-change events are computed server-side. SMS delivery (Twilio), FCM push, and Bhashini voice are <b>wired into the code but not yet sending</b> — that's the next milestone. Target: &lt; 60s delivery."
       />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 animate-stagger">
-        <MetricCard label="Alert Channels" value="2" icon="ph ph-broadcast" delta="SMS + Push" deltaColor="green" />
+        <MetricCard label="Alert Channels" value="2" icon="ph ph-broadcast" delta="SMS + Push (planned)" deltaColor="amber" />
         <MetricCard label="Languages" value="3" icon="ph ph-translate" delta="EN · HI · TA" deltaColor="green" />
         <MetricCard label="Alert Types" value="4" icon="ph ph-bell-ringing" delta="Zone · MHW · Cyclone · MHI" deltaColor="amber" />
-        <MetricCard label="Delivery SLA" value="<60s" icon="ph ph-timer" delta="Real-time pipeline" deltaColor="green" />
+        <MetricCard label="Delivery Target" value="<60s" icon="ph ph-timer" delta="Design target · not yet measured" deltaColor="amber" />
       </div>
 
       <TabGroup tabs={[
@@ -59,14 +66,11 @@ export default function AlertsPage() {
       {tab === "subscribe" && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
           <form onSubmit={handleSubscribe} className="space-y-4">
-            <label className="block"><span className="text-xs text-text-muted">Phone (E.164)</span>
-              <input type="text" value={subForm.phone} onChange={(e) => setSubForm({ ...subForm, phone: e.target.value })}
-                placeholder="+919876543210"
-                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-faint" /></label>
-            <label className="block"><span className="text-xs text-text-muted">FCM Device Token (optional)</span>
-              <input type="text" value={subForm.device_token} onChange={(e) => setSubForm({ ...subForm, device_token: e.target.value })}
-                placeholder="Firebase token..."
-                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-faint" /></label>
+            <label className="block"><span className="text-xs text-text-muted">Mobile number</span>
+              <input type="tel" inputMode="tel" value={subForm.phone} onChange={(e) => setSubForm({ ...subForm, phone: e.target.value })}
+                placeholder="+91 98765 43210"
+                className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-faint" />
+              <span className="block mt-1 text-[11px] text-text-faint">Include your country code (e.g. +91 for India). We&apos;ll text zone and weather alerts here.</span></label>
             <label className="block"><span className="text-xs text-text-muted">Language</span>
               <select value={subForm.language} onChange={(e) => setSubForm({ ...subForm, language: e.target.value })}
                 className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text">
@@ -80,10 +84,26 @@ export default function AlertsPage() {
                     <input type="checkbox" checked={subForm.alert_types.includes(t)}
                       onChange={(e) => setSubForm({ ...subForm, alert_types: e.target.checked ? [...subForm.alert_types, t] : subForm.alert_types.filter((x) => x !== t) })}
                       className="accent-[#1f7a8c]" />
-                    {t}
+                    {ALERT_TYPE_LABELS[t] ?? t}
                   </label>
                 ))}
               </div>
+            </div>
+            {/* Developer option — a raw Firebase push token. Hidden by default so
+                the everyday subscribe flow stays a single field: your number. */}
+            <div>
+              <button type="button" onClick={() => setShowDevOpts((v) => !v)}
+                className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-accent transition-colors">
+                <i className={`ph ${showDevOpts ? "ph-caret-down" : "ph-caret-right"}`} style={{ fontSize: 12 }} />
+                Advanced (push notifications)
+              </button>
+              {showDevOpts && (
+                <label className="block mt-2"><span className="text-xs text-text-muted">FCM device token (optional)</span>
+                  <input type="text" value={subForm.device_token} onChange={(e) => setSubForm({ ...subForm, device_token: e.target.value })}
+                    placeholder="Firebase Cloud Messaging token…"
+                    className="w-full mt-1 bg-white border border-card-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-faint" />
+                  <span className="block mt-1 text-[11px] text-text-faint">For app-based push instead of SMS. Most users can leave this empty.</span></label>
+              )}
             </div>
             {subError && <p className="text-[#c25a44] text-sm">{subError}</p>}
             <button type="submit" className="w-full bg-accent hover:bg-accent-dark text-white rounded-xl py-3 font-semibold transition-colors flex items-center justify-center gap-2">
@@ -178,7 +198,7 @@ export default function AlertsPage() {
 
           {/* Recent alerts timeline */}
           <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
-            <h3 className="text-[11px] uppercase tracking-[0.08em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Sample alert timeline</h3>
+            <h3 className="text-[11px] uppercase tracking-[0.08em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Sample alert timeline (illustrative)</h3>
             {[
               { time: "07:42", type: "zone_change", msg: "Veraval Bank → GREEN", color: "#3a8c5f", icon: "ph ph-map-trifold" },
               { time: "06:18", type: "mhw", msg: "Gulf of Mannar heat stress +1.2°C", color: "#c25a44", icon: "ph ph-thermometer-simple" },
@@ -233,20 +253,19 @@ export default function AlertsPage() {
           {/* SLA & coverage */}
           <div className="space-y-5">
             <div className="bg-white border border-card-border rounded-2xl p-5" style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04)" }}>
-              <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>SLA targets</h3>
+              <h3 className="text-[11px] uppercase tracking-[0.1em] text-text-muted mb-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>SLA targets (design)</h3>
+              <p className="text-[10.5px] text-text-faint mb-3">Latency goals for live delivery — not yet measured in production.</p>
               {[
-                { label: "SMS delivery", target: "< 60s", status: "met", pct: 92 },
-                { label: "Push notification", target: "< 10s", status: "met", pct: 98 },
-                { label: "Voice synthesis", target: "< 30s", status: "phase 2", pct: 0 },
+                { label: "SMS delivery", target: "< 60s", status: "Planned" },
+                { label: "Push notification", target: "< 10s", status: "Planned" },
+                { label: "Voice synthesis", target: "< 30s", status: "Planned" },
               ].map((s) => (
-                <div key={s.label} className="py-3 border-t border-[#f0ebdf] first:border-0">
-                  <div className="flex justify-between text-[12.5px] mb-2">
-                    <span className="text-text-secondary">{s.label}</span>
+                <div key={s.label} className="flex items-center justify-between py-2.5 border-t border-[#f0ebdf] first:border-0 text-[12.5px]">
+                  <span className="text-text-secondary">{s.label}</span>
+                  <span className="flex items-center gap-2">
                     <span className="text-text font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{s.target}</span>
-                  </div>
-                  <div className="h-[7px] rounded-full bg-[#eee7d8] overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: s.pct > 0 ? "#3a8c5f" : "#b0b9b9" }} />
-                  </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-zone-amber-bg text-[#8f6516] border border-[#ecddb8]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{s.status}</span>
+                  </span>
                 </div>
               ))}
             </div>

@@ -21,6 +21,8 @@ export interface MHIStatusResponse {
   alerts_active: number;
   computed_at: string;
   model: string;
+  data_source?: string;
+  coverage?: string;
 }
 
 export interface MHIScoreResponse {
@@ -80,20 +82,44 @@ export interface MigrationForecastResponse {
   weeks_ahead: number;
 }
 
+export interface CVSpeciesGuess {
+  species_common: string;
+  species_scientific: string;
+  aphia_id: number;
+  confidence: number;
+}
+
 export interface CVDetection {
   detection_id: number;
   species_scientific: string;
   species_common: string;
   aphia_id: number;
   confidence: number;
+  uncertain?: boolean;
+  alternatives?: CVSpeciesGuess[];
   fork_length_mm: number;
   estimated_weight_g: number;
+  length_estimated?: boolean;
   source?: string;
+}
+
+export interface CVIdentification {
+  species_common: string;
+  species_scientific: string;
+  aphia_id: number;
+  confidence: number;
+  uncertain: boolean;
+  alternatives: CVSpeciesGuess[];
+  fork_length_mm: number | null;
+  estimated_weight_g: number | null;
+  length_estimated?: boolean;
+  from_image: boolean;
 }
 
 export interface CVAnalyzeResponse {
   total_fish_detected: number;
   species_summary: Record<string, number>;
+  identification?: CVIdentification | null;
   detections: CVDetection[];
   model: string;
 }
@@ -159,6 +185,8 @@ export interface ScenarioResponse {
   scenario: { name: string; sst_delta_c: number; duration_weeks: number; severity: string };
   mhi_projection?: {
     grid_points: number;
+    baseline_mhi: number;
+    projected_mhi: number;
     avg_delta_mhi: number;
     critical_cells: number;
     data: ScenarioPoint[];
@@ -172,6 +200,7 @@ export interface ScenarioResponse {
   };
   computed_at: string;
   model: string;
+  method_note?: string;
 }
 
 export interface ProvenanceCitation {
@@ -209,11 +238,13 @@ export interface CatchRecord {
   transaction_id: string;
   block_number: number;
   species_name: string;
+  species_aphia_id?: number;
   quantity_kg: number;
   latitude: number;
   longitude: number;
   landing_site_id: string;
   event_timestamp: string;
+  fisher_token?: string | null;
   pmmsy_cert_ref: string;
 }
 

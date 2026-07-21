@@ -1,7 +1,11 @@
 export const NAV_ITEMS = [
   { label: "Fisher View", href: "/", icon: "ph ph-sailboat", section: "fisher" },
   { label: "Fishing Advisory", href: "/fishing-advisory", icon: "ph ph-target", section: "fisher" },
+  { label: "Ask by Voice", href: "/voice", icon: "ph ph-microphone", section: "fisher" },
+  { label: "Community Catch", href: "/community", icon: "ph ph-users-three", section: "fisher" },
+  { label: "Ocean Footprint", href: "/footprint", icon: "ph ph-leaf", section: "fisher" },
   { label: "Dashboard", href: "/dashboard", icon: "ph ph-squares-four", section: "expert" },
+  { label: "Impact", href: "/impact", icon: "ph ph-hand-heart", section: "expert" },
   { label: "Marine Health Index", href: "/mhi", icon: "ph ph-heartbeat", section: "expert" },
   { label: "Fishing Zones", href: "/sfz", icon: "ph ph-map-trifold", section: "expert" },
   { label: "Migration Forecast", href: "/migration", icon: "ph ph-fish", section: "expert" },
@@ -11,7 +15,7 @@ export const NAV_ITEMS = [
   { label: "Ask OceanMind", href: "/rag", icon: "ph ph-chat-circle-dots", section: "expert" },
   { label: "Catch Ledger", href: "/blockchain", icon: "ph ph-cube", section: "expert" },
   { label: "Alerts", href: "/alerts", icon: "ph ph-bell", section: "expert" },
-  { label: "Voice", href: "/voice", icon: "ph ph-microphone", section: "expert" },
+  { label: "Plans & Pricing", href: "/pricing", icon: "ph ph-tag", section: "expert" },
 ];
 
 export const SPECIES_OPTIONS: Record<string, number> = {

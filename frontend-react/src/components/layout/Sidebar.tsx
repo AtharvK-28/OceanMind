@@ -3,10 +3,15 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import NavLink from "./NavLink";
 import SystemStatus from "./SystemStatus";
+import LanguageToggle from "@/components/ui/LanguageToggle";
+import { usePersona } from "@/lib/persona";
 import { NAV_ITEMS } from "@/lib/constants";
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
+  const { persona, setPersona } = usePersona();
+  const fisherMode = persona === "fisher";
+  const [showResearch, setShowResearch] = useState(false);
   const pathname = usePathname();
   const currentPage = NAV_ITEMS.find(
     (i) => (i.href === "/" ? pathname === "/" : pathname.startsWith(i.href))
@@ -28,7 +33,10 @@ export default function Sidebar() {
           </svg>
         </button>
         <i className="ph ph-wave-sine text-xl text-[#9fe0d6]" />
-        <span className="text-sm font-semibold text-[#f3f8f6]">{currentPage?.label ?? "OceanMind"}</span>
+        <span className="text-sm font-semibold text-[#f3f8f6] min-w-0 truncate">{currentPage?.label ?? "OceanMind"}</span>
+        <div className="ml-auto flex-none">
+          <LanguageToggle variant="dark" />
+        </div>
       </div>
 
       {/* Overlay */}
@@ -44,7 +52,7 @@ export default function Sidebar() {
         ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
       `} style={{ background: "linear-gradient(177deg, #16434c 0%, #10333b 60%, #0e2d34 100%)" }}>
         {/* Brand */}
-        <div className="px-[22px] pt-6 pb-[18px]">
+        <div className="px-[22px] pt-4 pb-3">
           <div className="flex items-center gap-[11px]">
             <div className="w-[38px] h-[38px] rounded-[11px] bg-white/10 border border-white/[0.14] flex items-center justify-center text-[#9fe0d6]">
               <i className="ph ph-wave-sine text-[21px]" />
@@ -56,10 +64,11 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="h-px bg-white/[0.08] mx-[18px] mb-[14px]" />
+        <div className="h-px bg-white/[0.08] mx-[18px] mb-2" />
 
-        {/* Navigation */}
-        <nav className="flex-1 px-[14px] py-0 overflow-y-auto" onClick={() => setOpen(false)}>
+        {/* Navigation — bottom fade hints at overflow on short screens */}
+        <nav className="flex-1 px-[14px] py-0 overflow-y-auto" onClick={() => setOpen(false)}
+          style={{ maskImage: "linear-gradient(to bottom, black calc(100% - 18px), transparent)", WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 18px), transparent)" }}>
           <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] py-1 pb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>On the water</div>
           <div className="space-y-[3px] mb-3">
             {fisherItems.map((item) => (
@@ -67,15 +76,43 @@ export default function Sidebar() {
             ))}
           </div>
 
-          <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] pt-4 pb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Research console</div>
-          <div className="space-y-[2px]">
-            {expertItems.map((item) => (
-              <NavLink key={item.href} {...item} />
-            ))}
-          </div>
+          {fisherMode ? (
+            // Fishers get the research tools collapsed by default — reachable,
+            // but out of the way of the on-the-water essentials.
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowResearch((v) => !v); }}
+              className="w-full flex items-center justify-between px-[10px] pt-3 pb-1.5 text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] hover:text-[rgba(220,235,233,0.7)] transition-colors"
+              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            >
+              <span>Research console</span>
+              <i className={`ph ${showResearch ? "ph-caret-up" : "ph-caret-down"} text-[11px]`} />
+            </button>
+          ) : (
+            <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] pt-3 pb-1.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Research console</div>
+          )}
+          {(!fisherMode || showResearch) && (
+            <div className="space-y-[2px]">
+              {expertItems.map((item) => (
+                <NavLink key={item.href} {...item} />
+              ))}
+            </div>
+          )}
         </nav>
 
         <div className="border-t border-white/[0.06] mx-4" />
+        {persona && (
+          <button
+            onClick={() => { setPersona(null); setOpen(false); }}
+            className="mx-4 mt-3 flex items-center justify-center gap-1.5 text-[10.5px] text-[rgba(220,235,233,0.55)] hover:text-[#9fe0d6] transition-colors"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          >
+            <i className="ph ph-user-switch text-[13px]" />
+            Viewing as {persona === "fisher" ? "Fisher" : "Researcher"} · Switch
+          </button>
+        )}
+        <div className="px-4 pt-3 flex justify-center">
+          <LanguageToggle variant="dark" />
+        </div>
         <div className="py-3">
           <SystemStatus />
         </div>
