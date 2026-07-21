@@ -274,6 +274,27 @@ it is a strength, but only if you frame it first.**
 > that's a government channel actively looking for digital services to run on it.
 > We sell into the export market and distribute through the government one."
 
+## "What is your strategy for customer retention? Why won't users churn?"
+> "Two distinct retention strategies. For **Fishers**, it's a daily safety and utility habit. 
+> Every morning they need live weather and fishing advisories to decide where to navigate.
+> Additionally, once they log catches and build up their landing history, the platform becomes 
+> their personal financial ledger (proving their creditworthiness to banks for boat loans). 
+> For **Exporters**, it's high switching costs. Their historical supply chain audits and PWA 
+> vessel logs are stored securely on our blockchain. Leaving the platform means losing 
+> their verifiable traceability records, risking customs rejections from EU/US buyers. 
+> The compliance requirement locks them in."
+
+## "How does the economics work for a specific coastline, like Gujarat's?"
+> "Gujarat has India's longest coastline (~1,600 km) and leads in marine fish production, 
+> landing ~7 lakh metric tonnes annually valued at ~₹8,000 Crore across ~30,000 active vessels. 
+> However, warming trends have caused nearshore fish abundance to drop, forcing fishers to travel 
+> further, pushing diesel costs up by 25% and cutting profit margins down to under 15%. 
+> By directing just 10% of Gujarat's fleet (3,000 boats) to Sustainable Fishing Zones, we save them 
+> an average of 5 litres of diesel per trip. At 15 trips/month and ₹95/litre, that translates to 
+> **₹25.6 Crore saved in fuel costs annually**. 
+> Furthermore, by validating exports (~₹3,000 Crore of Gujarat's landings) for global sustainability compliance, 
+> we unlock a 5% price premium, injecting **₹150 Crore of additional revenue** back into the state's coastal economy."
+
 ---
 
 # 🟢 TIER 4 — Domain / ecology questions
