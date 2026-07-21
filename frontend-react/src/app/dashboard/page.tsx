@@ -210,9 +210,12 @@ export default function Dashboard() {
 
           {/* Catch Ledger */}
           <div className="bg-white border border-card-border rounded-2xl p-[18px]" style={{ boxShadow: cardShadow }}>
-            <div className="flex items-center justify-between mb-[14px]">
-              <h3 className="m-0 text-[16px] font-semibold text-[#16323a]" style={{ fontFamily: "'Newsreader', serif" }}>Catch ledger</h3>
-              <span className="inline-flex items-center gap-[5px] text-[10.5px] text-[#2a6f7c]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            <div className="flex items-start justify-between mb-[14px]">
+              <div>
+                <h3 className="m-0 text-[16px] font-semibold text-[#16323a]" style={{ fontFamily: "'Newsreader', serif" }}>Catch ledger</h3>
+                <div className="text-[11px] text-text-muted mt-[2px]">Every logged catch is hashed and chained — tap any entry to verify</div>
+              </div>
+              <span className="inline-flex items-center gap-[5px] text-[10.5px] text-[#2a6f7c] mt-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                 <i className="ph ph-shield-check text-[13px]" /> verified
               </span>
             </div>
@@ -223,7 +226,7 @@ export default function Dashboard() {
                 { species: "Yellowfin Tuna", site: "Vizag, AP", time: "06:55", kg: "88 kg", hash: "0xa7d0…1f" },
                 { species: "Giant Tiger Prawn", site: "Mangalore, KA", time: "06:31", kg: "52 kg", hash: "0x2be9…c4" },
               ].map((l, i) => (
-                <div key={i} className="flex items-center gap-3 py-[11px] border-t border-[#f0ebdf]">
+                <div key={i} onClick={() => router.push("/blockchain")} className="flex items-center gap-3 py-[11px] border-t border-[#f0ebdf] cursor-pointer hover:opacity-80 transition-opacity">
                   <span className="w-[34px] h-[34px] flex-none rounded-[9px] bg-zone-green-bg text-[#2a6f7c] flex items-center justify-center">
                     <i className="ph ph-fish-simple text-[16px]" />
                   </span>
