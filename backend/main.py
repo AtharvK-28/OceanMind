@@ -573,6 +573,11 @@ _ALLOWED_ORIGIN_REGEX = None if _IS_PRODUCTION else (
     r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
     r"192\.168\.\d{1,3}\.\d{1,3}|"
     r"172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?"
+    # Demo tunnels. Showing the PWA on a phone needs HTTPS, which means the
+    # frontend is served from a quick-tunnel host — without these the browser
+    # blocks every API call and the app hangs on "connecting".
+    r"|https://[a-z0-9-]+\.trycloudflare\.com"
+    r"|https://[a-z0-9-]+\.ngrok(-free)?\.(io|app|dev)"
     r"|capacitor://localhost|ionic://localhost)$"
 )
 
