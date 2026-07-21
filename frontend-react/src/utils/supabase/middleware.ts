@@ -17,7 +17,7 @@ export const createClient = async (request: NextRequest) => {
   // middleware matcher covers every path, that 500s the entire app.
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
-  createServerClient(
+  const supabase = createServerClient(
     supabaseUrl,
     supabaseKey,
     {
@@ -26,7 +26,7 @@ export const createClient = async (request: NextRequest) => {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -38,15 +38,8 @@ export const createClient = async (request: NextRequest) => {
     },
   );
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const publicRoutes = ['/', '/login', '/signup']
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname)
+  // Refresh auth session if user is logged in
+  await supabase.auth.getUser();
 
-  if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-
-  return supabaseResponse
+  return supabaseResponse;
 };
