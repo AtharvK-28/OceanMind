@@ -13,9 +13,9 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 try:
-    from langchain_openai import ChatOpenAI
+    from langchain_google_genai import ChatGoogleGenerativeAI
 except ImportError:
-    ChatOpenAI = None
+    ChatGoogleGenerativeAI = None
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from loguru import logger
@@ -252,22 +252,18 @@ class OceanMindRAG:
             os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
             self.vectorstore.save_local(FAISS_INDEX_PATH)
 
-        # LLM: OpenRouter (OpenAI-compatible API, wide model selection)
-        if openrouter_key and ChatOpenAI:
-            model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
-            self.llm = ChatOpenAI(
+        # LLM: Google Gemini
+        gemini_key = os.getenv("GEMINI_API_KEY", "")
+        if gemini_key and ChatGoogleGenerativeAI:
+            model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+            self.llm = ChatGoogleGenerativeAI(
                 model=model,
-                api_key=openrouter_key,
-                base_url="https://openrouter.ai/api/v1",
+                google_api_key=gemini_key,
                 temperature=0.1,
                 max_tokens=512,
-                default_headers={
-                    "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:3000"),
-                    "X-Title": os.getenv("OPENROUTER_SITE_NAME", "OceanMind"),
-                },
             )
-            self._llm_name = f"{model} (OpenRouter)"
-            logger.info(f"LLM: OpenRouter connected — model: {model}")
+            self._llm_name = f"{model} (Gemini)"
+            logger.info(f"LLM: Gemini connected — model: {model}")
         else:
             self.llm = None
             self._llm_name = "fallback"
@@ -306,16 +302,23 @@ class OceanMindRAG:
 
         # Generate answer
         if self.llm:
-            prompt = ChatPromptTemplate.from_messages([
-                ("system",
-                 "You are OceanMind, an AI marine intelligence assistant for Indian fisheries and ocean science. "
-                 "Answer using ONLY the provided context. Be concise and factual. "
-                 "If the context doesn't cover the question, say so clearly.\n\nContext:\n{context}"),
-                ("human", "{question}"),
-            ])
-            chain = prompt | self.llm
-            response = chain.invoke({"context": context, "question": question})
-            answer = response.content
+            try:
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system",
+                     "You are OceanMind, an AI marine intelligence assistant for Indian fisheries and ocean science. "
+                     "Answer using ONLY the provided context. Be concise and factual. "
+                     "If the context doesn't cover the question, say so clearly.\n\nContext:\n{context}"),
+                    ("human", "{question}"),
+                ])
+                chain = prompt | self.llm
+                response = chain.invoke({"context": context, "question": question})
+                answer = response.content
+            except Exception as e:
+                logger.error(f"LLM API Error: {e}")
+                answer = (
+                    f"[RAG Fallback Mode — LLM API Error: {str(e)[:100]}]\n\n"
+                    f"Based on retrieved ocean data:\n{context[:600]}..."
+                )
         else:
             # Fallback: return context-based answer without LLM
             answer = (

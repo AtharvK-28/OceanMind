@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Sidebar from "@/components/layout/Sidebar";
 import { ToastProvider } from "@/components/ui/Toast";
+import { LangProvider } from "@/lib/i18n";
 
 import "./globals.css";
 
@@ -32,11 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen flex" style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif", background: "#f1ece1", color: "#16323a" }}>
         <ToastProvider>
-
+        <LangProvider>
           <Sidebar />
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 lg:pt-6 max-w-[1280px]">
             {children}
           </main>
+        </LangProvider>
         </ToastProvider>
       </body>
     </html>

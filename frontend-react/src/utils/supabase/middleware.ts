@@ -17,7 +17,7 @@ export const createClient = async (request: NextRequest) => {
   // middleware matcher covers every path, that 500s the entire app.
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
-  createServerClient(
+  const supabase = createServerClient(
     supabaseUrl,
     supabaseKey,
     {
@@ -38,14 +38,13 @@ export const createClient = async (request: NextRequest) => {
     },
   );
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const publicRoutes = ['/', '/login', '/signup']
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname)
-
-  if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  // Refresh the session (keeps cookies alive) but don't block access.
+  // When Supabase isn't fully configured or the user hasn't signed in,
+  // we still let them through so the app is usable for local dev / demo.
+  try {
+    await supabase.auth.getUser()
+  } catch {
+    // ignore — session refresh is best-effort
   }
 
   return supabaseResponse
