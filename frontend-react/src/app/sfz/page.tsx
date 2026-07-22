@@ -9,6 +9,7 @@ import MetricCard from "@/components/ui/MetricCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import ErrorState from "@/components/ui/ErrorState";
 import ResultBadge from "@/components/ui/ResultBadge";
+import ScoreGuide from "@/components/ui/ScoreGuide";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import type { SFZCurrentResponse, SFZClassifyResponse, SHAPEntry } from "@/types/api";
@@ -132,6 +133,27 @@ export default function SFZPage() {
           </div>
         )}
       </div>
+
+      <ScoreGuide
+        title="What do the zone colours and the bycatch risk score mean?"
+        intro="Each grid cell is classified weekly by an XGBoost model into GREEN, AMBER or RED. The classification is driven by a bycatch risk score from 0 to 1 — the modelled probability that fishing this cell brings up non-target species, juveniles or protected animals alongside the catch. Lower is better."
+        bandsHeading="What the zone colours mean"
+        bands={[
+          { range: "risk < 0.33", label: "GREEN · Recommended", color: "#3a8c5f", meaning: "Good target-species availability with low bycatch probability. The productive, clean cells.", action: "Fish here first. These are the cells the advisory routes you to." },
+          { range: "0.33 – 0.66", label: "AMBER · Caution", color: "#d49a2e", meaning: "Workable, but with a meaningfully higher chance of hauling up unintended species.", action: "Fish selectively — larger mesh, shorter sets, and check the haul carefully." },
+          { range: "risk > 0.66", label: "RED · Avoid", color: "#c25a44", meaning: "High bycatch probability, often overlapping juvenile grounds or protected species habitat.", action: "Avoid. Geofencing will warn you if you drift into one of these cells." },
+        ]}
+        factorsHeading="What drives the classification"
+        factors={[
+          { name: "Sea surface temperature", detail: "Sets the thermal habitat — species aggregate within fairly narrow bands." },
+          { name: "Chlorophyll-a", detail: "A proxy for productivity. Blooms concentrate forage fish, and predators follow." },
+          { name: "Sea surface height anomaly", detail: "Reveals eddies and fronts, which are where prey concentrates." },
+          { name: "Mixed layer depth", detail: "How deep the well-mixed surface reaches — controls where fish sit in the column." },
+          { name: "Fishing effort (AIS)", detail: "Existing pressure on the cell. Heavily-worked ground carries more bycatch risk." },
+          { name: "Wind stress curl", detail: "Drives upwelling, which brings nutrients up and productivity with them." },
+        ]}
+        method="Model: XGBoost classifier, retrained weekly. Every cell carries SHAP values naming the three features that most influenced its own classification — tap a zone on the map to see why that specific cell was graded the way it was. This is a recommendation to improve catch quality and reduce bycatch, not a legal restriction; closed seasons and no-take areas are enforced separately on the compliance page."
+      />
     </div>
   );
 }

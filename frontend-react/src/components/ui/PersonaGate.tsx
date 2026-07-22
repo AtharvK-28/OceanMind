@@ -22,9 +22,7 @@ export default function PersonaGate() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-page-enter">
       <div className="bg-white rounded-2xl max-w-md w-full p-7 text-center" style={{ boxShadow: "0 20px 60px rgba(23,48,57,0.3)" }}>
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-[#16434c] text-[#9fe0d6] flex items-center justify-center mb-4">
-          <i className="ph ph-wave-sine text-[28px]" />
-        </div>
+        <img src="/logo-mark.png" alt="" className="w-14 h-14 mx-auto mb-4" />
         <h2 className="text-[22px] font-semibold text-text" style={{ fontFamily: "'Newsreader', serif" }}>{t("persona.title")}</h2>
         <p className="text-[13px] text-text-muted mt-1 mb-6">{t("persona.subtitle")}</p>
 

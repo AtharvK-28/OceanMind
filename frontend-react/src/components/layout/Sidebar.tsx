@@ -9,6 +9,26 @@ import { usePersona } from "@/lib/persona";
 import { DEMO_ALERTS_KEY } from "@/components/ui/DemoAlerts";
 import { NAV_ITEMS } from "@/lib/constants";
 
+/** Collapsible nav section heading. stopPropagation keeps the mobile drawer
+ *  open — the <nav> closes it on click so tapping a link dismisses the sheet. */
+function SectionHeader({ label, open, onToggle, first }: {
+  label: string; open: boolean; onToggle: () => void; first?: boolean;
+}) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      aria-expanded={open}
+      className={`w-full flex items-center justify-between px-[10px] ${first ? "pt-1" : "pt-3"} pb-1.5
+                  text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)]
+                  hover:text-[rgba(220,235,233,0.7)] transition-colors`}
+      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+    >
+      <span>{label}</span>
+      <i className={`ph ${open ? "ph-caret-up" : "ph-caret-down"} text-[11px]`} />
+    </button>
+  );
+}
+
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
   // Read after mount so server and client first render agree.
@@ -22,8 +42,11 @@ export default function Sidebar() {
     });
   }
   const { persona, setPersona } = usePersona();
-  const fisherMode = persona === "fisher";
+  const [showFisher, setShowFisher] = useState(true);
   const [showResearch, setShowResearch] = useState(false);
+  // Researchers land with the console already open; fishers keep it tucked
+  // away behind the caret so the on-the-water items come first.
+  useEffect(() => { setShowResearch(persona !== "fisher"); }, [persona]);
   const pathname = usePathname();
   const currentPage = NAV_ITEMS.find(
     (i) => (i.href === "/" ? pathname === "/" : pathname.startsWith(i.href))
@@ -44,7 +67,7 @@ export default function Sidebar() {
               : <><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></>}
           </svg>
         </button>
-        <i className="ph ph-wave-sine text-xl text-[#9fe0d6]" />
+        <img src="/logo-mark.png" alt="" className="w-5.5 h-5.5 shrink-0" />
         <span className="text-sm font-semibold text-[#f3f8f6] min-w-0 truncate">{currentPage?.label ?? "OceanMind"}</span>
         <div className="ml-auto flex-none flex items-center gap-2">
           <InstallButton />
@@ -67,8 +90,8 @@ export default function Sidebar() {
         {/* Brand */}
         <div className="px-[22px] pt-4 pb-3">
           <div className="flex items-center gap-[11px]">
-            <div className="w-[38px] h-[38px] rounded-[11px] bg-white/10 border border-white/[0.14] flex items-center justify-center text-[#9fe0d6]">
-              <i className="ph ph-wave-sine text-[21px]" />
+            <div className="w-[38px] h-[38px] rounded-[11px] bg-white/10 border border-white/[0.14] flex items-center justify-center">
+              <img src="/logo-mark.png" alt="" className="w-6.5 h-6.5" />
             </div>
             <div>
               <div className="text-[21px] font-semibold leading-none text-[#f3f8f6] tracking-tight" style={{ fontFamily: "'Newsreader', serif" }}>OceanMind</div>
@@ -82,28 +105,21 @@ export default function Sidebar() {
         {/* Navigation — bottom fade hints at overflow on short screens */}
         <nav className="flex-1 px-[14px] py-0 overflow-y-auto" onClick={() => setOpen(false)}
           style={{ maskImage: "linear-gradient(to bottom, black calc(100% - 18px), transparent)", WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 18px), transparent)" }}>
-          <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] py-1 pb-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>On the water</div>
-          <div className="space-y-[3px] mb-3">
-            {fisherItems.map((item) => (
-              <NavLink key={item.href} {...item} />
-            ))}
-          </div>
-
-          {fisherMode ? (
-            // Fishers get the research tools collapsed by default — reachable,
-            // but out of the way of the on-the-water essentials.
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowResearch((v) => !v); }}
-              className="w-full flex items-center justify-between px-[10px] pt-3 pb-1.5 text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] hover:text-[rgba(220,235,233,0.7)] transition-colors"
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            >
-              <span>Research console</span>
-              <i className={`ph ${showResearch ? "ph-caret-up" : "ph-caret-down"} text-[11px]`} />
-            </button>
-          ) : (
-            <div className="text-[9.5px] tracking-[0.15em] uppercase text-[rgba(220,235,233,0.4)] px-[10px] pt-3 pb-1.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>Research console</div>
+          <SectionHeader label="On the water" open={showFisher} first
+            onToggle={() => setShowFisher((v) => !v)} />
+          {showFisher && (
+            <div className="space-y-[3px] mb-1">
+              {fisherItems.map((item) => (
+                <NavLink key={item.href} {...item} />
+              ))}
+            </div>
           )}
-          {(!fisherMode || showResearch) && (
+
+          {/* Fishers start with the research tools collapsed — reachable, but
+              out of the way of the on-the-water essentials. */}
+          <SectionHeader label="Research console" open={showResearch}
+            onToggle={() => setShowResearch((v) => !v)} />
+          {showResearch && (
             <div className="space-y-[2px]">
               {expertItems.map((item) => (
                 <NavLink key={item.href} {...item} />

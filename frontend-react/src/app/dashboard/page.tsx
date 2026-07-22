@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { fetcher, apiGet } from "@/lib/api";
+import { fetcher, apiGet, apiPost } from "@/lib/api";
 import { sfzFoliumColor } from "@/lib/colors";
 import MetricCard from "@/components/ui/MetricCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -16,6 +16,40 @@ import { REGIONS } from "@/lib/constants";
 
 const ZONE_COLORS: Record<string, string> = { GREEN: "#3a8c5f", AMBER: "#d49a2e", RED: "#c25a44" };
 const cardShadow = "0 1px 2px rgba(23,48,57,0.04), 0 12px 30px rgba(23,48,57,0.04)";
+const mono = { fontFamily: "'IBM Plex Mono', monospace" };
+const serif = { fontFamily: "'Newsreader', serif" };
+
+// Stress bands returned by the MHI model, in the order we want to show them.
+const STRESS_LEVELS: { key: string; label: string; color: string }[] = [
+  { key: "NORMAL", label: "Normal", color: "#3a8c5f" },
+  { key: "WATCH", label: "Watch", color: "#8bbf5f" },
+  { key: "WARNING", label: "Warning", color: "#d49a2e" },
+  { key: "CRITICAL", label: "Critical", color: "#c25a44" },
+];
+
+// Representative shelf point for live sea state. The map's default centre
+// (15, 78) is inland, and the marine API rejects land coordinates.
+const SEA_STATE_POINT = { lat: 20.0, lon: 69.0, name: "Gujarat shelf · Arabian Sea" };
+
+interface AdvisoryResponse {
+  advisory: {
+    current: { sst_c: number | null; wave_height_m: number | null; wind_speed_kmh: number | null };
+    sst_7d_mean: number | null;
+    sst_trend_c: number | null;
+    fishing_score: number;
+    recommendation: string;
+    tides: { high_tide: { time: string; height_m: number } | null; low_tide: { time: string; height_m: number } | null };
+    sst_history: { time: string; value: number }[];
+  };
+  data_source: string;
+}
+
+const advisoryFetcher = () =>
+  apiPost<AdvisoryResponse>("/api/v1/fishing/advisory", {
+    lat: SEA_STATE_POINT.lat,
+    lon: SEA_STATE_POINT.lon,
+    site_name: SEA_STATE_POINT.name,
+  });
 
 // Haversine distance in nautical miles (approx)
 function calcNauticalMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -30,6 +64,10 @@ export default function Dashboard() {
   const { data: mhi } = useSWR<MHIStatusResponse>("/api/v1/mhi/status", fetcher, { refreshInterval: 30000 });
   const { data: sfz, isLoading: sfzLoading } = useSWR<SFZCurrentResponse>("/api/v1/sfz/current", fetcher, { refreshInterval: 30000 });
   const { data: chain } = useSWR<ChainSummaryResponse>("/api/v1/trace/chain-summary", fetcher, { refreshInterval: 10000 });
+  // Live sea state — Open-Meteo Marine, the one genuinely real-time feed we have.
+  const { data: advisory } = useSWR<AdvisoryResponse>("dashboard-sea-state", advisoryFetcher, {
+    refreshInterval: 600000, revalidateOnFocus: false,
+  });
 
   const [secs, setSecs] = useState(0);
   const [mapCenter, setMapCenter] = useState<[number, number]>([15, 78]);
@@ -41,14 +79,17 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    // Region personalisation is a bonus for signed-in users — skip it (rather
+    // than crash the page) when Supabase isn't configured or the call fails.
     const supabase = createClient();
+    if (!supabase) return;
     supabase.auth.getUser().then(({ data: { user } }) => {
       const regionName = user?.user_metadata?.region;
       if (regionName && REGIONS[regionName]) {
         setMapCenter([REGIONS[regionName].lat, REGIONS[regionName].lng]);
         setMapZoom(REGIONS[regionName].zoom);
       }
-    });
+    }).catch(() => {});
   }, []);
 
   // Fetch recent catch records for the ledger
@@ -64,10 +105,17 @@ export default function Dashboard() {
     ? Math.round(mhi.grid_cells.reduce((s, c) => s + c.mhi_score, 0) / mhi.grid_cells.length)
     : null;
 
-  // Compute real average SST from nearest MHI grid cell data
-  const avgSST = mhi?.grid_cells?.length
-    ? (mhi.grid_cells.reduce((s, c) => s + (c as unknown as Record<string, number>).sst_c ?? 28, 0) / mhi.grid_cells.length).toFixed(1)
-    : null;
+  // Sea surface temperature comes from the marine API, not the MHI grid — the
+  // MHI response carries scores only, so averaging it yielded a constant.
+  const cur = advisory?.advisory.current;
+  const avgSST = cur?.sst_c != null ? cur.sst_c.toFixed(1) : null;
+  const sstTrend = advisory?.advisory.sst_trend_c ?? null;
+
+  // Stress-level mix across the grid — real counts from the model output.
+  const stressMix = STRESS_LEVELS.map((l) => ({
+    ...l,
+    count: mhi?.grid_cells?.filter((c) => c.stress_level === l.key).length ?? 0,
+  }));
 
   // Dynamically find the best GREEN zone (lowest bycatch risk) for actionable recommendation
   const greenZones = sfz?.geojson.features.filter(f => f.properties.ecological_class === "GREEN") || [];
@@ -78,7 +126,7 @@ export default function Dashboard() {
   const topZone = bestGreen ? {
     name: `Grid ${bestGreen.geometry.coordinates[1].toFixed(1)}°N, ${bestGreen.geometry.coordinates[0].toFixed(1)}°E`,
     desc: `Optimal fishing conditions. Primarily driven by favorable ${bestGreen.properties.shap_top3?.[0]?.feature?.replace(/_/g, " ") ?? "oceanography"}. Bycatch risk is exceptionally low (${bestGreen.properties.bycatch_risk_score.toFixed(3)}). Safe to proceed.`,
-    sst: avgSST ? `${avgSST}°` : "—", // Global average fallback
+    sst: avgSST ? `${avgSST}°C` : "—",
     dist: calcNauticalMiles(mapCenter[0], mapCenter[1], bestGreen.geometry.coordinates[1], bestGreen.geometry.coordinates[0]).toString()
   } : {
     name: "Scanning Ocean Data...",
@@ -131,7 +179,10 @@ export default function Dashboard() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-[22px] animate-stagger">
         <MetricCard label="Marine Health Index" value={avgMhi ?? "—"} icon="ph ph-heartbeat" delta={avgMhi ? (avgMhi >= 60 ? "Stable" : "Stressed") : "Loading…"} deltaColor={avgMhi && avgMhi >= 60 ? "green" : "amber"} />
-        <MetricCard label="Sea Surface Temp" value={avgSST ? `${avgSST}°` : "—"} icon="ph ph-thermometer-simple" delta={avgSST ? "Live reading" : "Loading…"} deltaColor="green" />
+        <MetricCard label="Sea Surface Temp" value={avgSST ? `${avgSST}°C` : "—"} icon="ph ph-thermometer-simple"
+          delta={avgSST == null ? "Loading…" : sstTrend == null ? "Live · Open-Meteo"
+            : `${sstTrend > 0 ? "+" : ""}${sstTrend.toFixed(1)}°C vs 7-day mean`}
+          deltaColor={sstTrend != null && sstTrend > 1 ? "amber" : "green"} />
         <MetricCard label="Green Zones Today" value={sfzGreen || "—"} icon="ph ph-map-trifold" delta={`${greenPct}% recommended to fish`} deltaColor="green" />
         <MetricCard label="Active Stress Alerts" value={mhiAlerts} icon="ph ph-warning" delta={`${mhiAlerts} cells stressed`} deltaColor="red" />
       </div>
@@ -196,22 +247,76 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* MHI Trend */}
+            {/* MHI — real score and the actual stress mix behind it */}
             <div className="bg-white border border-card-border rounded-2xl p-[18px]" style={{ boxShadow: cardShadow }}>
               <div className="flex items-baseline justify-between">
-                <h3 className="m-0 text-[16px] font-semibold text-[#16323a]" style={{ fontFamily: "'Newsreader', serif" }}>Marine Health Index</h3>
-                <span className="text-[11px] text-[#2f6f4c] font-semibold">+2 wk</span>
+                <h3 className="m-0 text-[16px] font-semibold text-[#16323a]" style={serif}>Marine Health Index</h3>
+                <span className="text-[10px] text-text-faint" style={mono}>{mhiTotal} cells</span>
               </div>
               <div className="flex items-baseline gap-[5px] mt-2">
-                <span className="text-[30px] font-semibold text-[#16323a] leading-none" style={{ fontFamily: "'Newsreader', serif" }}>72</span>
-                <span className="text-[12px] text-[#9aa6a7]">/ 100 · Stable</span>
+                <span className="text-[30px] font-semibold text-[#16323a] leading-none" style={serif}>{avgMhi ?? "—"}</span>
+                <span className="text-[12px] text-[#9aa6a7]">
+                  / 100 · {avgMhi == null ? "loading" : avgMhi >= 60 ? "Stable" : avgMhi >= 40 ? "Stressed" : "Critical"}
+                </span>
               </div>
-              <svg viewBox="0 0 240 64" className="w-full mt-[10px] overflow-visible" style={{ height: 64 }}>
-                <polyline points="2,64 2,36.0 23.6,28.0 45.3,44.0 66.9,20.0 88.5,8.0 110.2,16.0 131.8,4.0 153.5,8.0 175.1,0.0 196.7,16.0 218.4,4.0 238,8.0 238,64" fill="#eaf3ef" stroke="none" />
-                <polyline points="2,36.0 23.6,28.0 45.3,44.0 66.9,20.0 88.5,8.0 110.2,16.0 131.8,4.0 153.5,8.0 175.1,0.0 196.7,16.0 218.4,4.0 238,8.0" fill="none" stroke="#3a8c5f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <div className="flex justify-between text-[8.5px] text-[#b0b9b9] mt-[2px]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}><span>W14</span><span>W26</span></div>
+
+              <div className="mt-4 space-y-2">
+                {stressMix.map((s) => (
+                  <div key={s.key} className="flex items-center gap-2.5">
+                    <span className="w-[58px] flex-none text-[11px] text-[#46585b]">{s.label}</span>
+                    <div className="flex-1 h-2 rounded-full bg-[#f0ebdf] overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: mhiTotal ? `${(s.count / mhiTotal) * 100}%` : "0%", background: s.color }} />
+                    </div>
+                    <span className="w-[30px] flex-none text-right text-[11px] text-[#16323a]" style={mono}>{s.count}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[9.5px] text-text-faint mt-3" style={mono}>
+                {mhi?.model ?? "Isolation Forest"} · {mhi?.data_source ?? "—"}
+              </div>
             </div>
+          </div>
+
+          {/* Live sea state — the one genuinely real-time feed, shown plainly */}
+          <div className="bg-white border border-card-border rounded-2xl p-[18px]" style={{ boxShadow: cardShadow }}>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="m-0 text-[16px] font-semibold text-[#16323a]" style={serif}>Live sea state</h3>
+                <div className="text-[11.5px] text-text-muted mt-[2px]">{SEA_STATE_POINT.name}</div>
+              </div>
+              <span className="inline-flex items-center gap-[5px] px-[9px] py-[5px] rounded-lg bg-zone-green-bg border border-[#cfe6dd] text-[9.5px] text-[#2f6f4c]" style={mono}>
+                <span className="w-[5px] h-[5px] rounded-full bg-zone-green" style={{ animation: "pulse 2.4s infinite" }} />
+                OPEN-METEO
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { icon: "ph ph-thermometer-simple", label: "SEA TEMP", value: avgSST ? `${avgSST}°C` : "—" },
+                { icon: "ph ph-waves", label: "WAVE HEIGHT", value: cur?.wave_height_m != null ? `${cur.wave_height_m} m` : "—" },
+                { icon: "ph ph-wind", label: "WIND", value: cur?.wind_speed_kmh != null ? `${Math.round(cur.wind_speed_kmh)} km/h` : "—" },
+                { icon: "ph ph-arrow-fat-lines-up", label: "NEXT HIGH TIDE", value: advisory?.advisory.tides?.high_tide?.time ?? "—" },
+              ].map((s) => (
+                <div key={s.label} className="text-center p-[11px] rounded-xl bg-card-hover border border-card-border">
+                  <i className={`${s.icon} text-[17px] text-[#2a6f7c]`} />
+                  <div className="text-[16px] font-semibold text-[#16323a] mt-1" style={serif}>{s.value}</div>
+                  <div className="text-[9px] text-text-muted tracking-[0.04em]">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {advisory && (
+              <div className="flex items-center gap-3 mt-3.5 pt-3.5 border-t border-[#f0ebdf]">
+                <span className="text-[11.5px] text-text-muted flex-none">Fishing potential</span>
+                <div className="flex-1 h-2 rounded-full bg-[#f0ebdf] overflow-hidden">
+                  <div className="h-full rounded-full" style={{
+                    width: `${advisory.advisory.fishing_score}%`,
+                    background: advisory.advisory.fishing_score >= 65 ? "#3a8c5f" : advisory.advisory.fishing_score >= 45 ? "#d49a2e" : "#c25a44",
+                  }} />
+                </div>
+                <span className="text-[12px] font-semibold text-[#16323a] flex-none" style={mono}>
+                  {advisory.advisory.fishing_score} · {advisory.advisory.recommendation}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

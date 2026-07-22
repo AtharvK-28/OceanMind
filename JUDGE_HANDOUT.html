@@ -1,0 +1,391 @@
+<meta charset="utf-8">
+<title>OceanMind — Judge Leave-Behind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#f1ece1; --card:#fff; --border:#ece5d6;
+    --teal-from:#16434c; --teal-to:#0e2d34;
+    --accent:#1f7a8c; --mint:#9fe0d6;
+    --tx:#16323a; --tx2:#6d7e80; --tx3:#8a9698;
+    --green:#3a8c5f; --green-bg:#eaf3ef;
+    --amber:#d49a2e; --amber-bg:#f7efdb;
+    --red:#c25a44;   --red-bg:#f6e6e1;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+    --serif:'Newsreader',Georgia,serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  @page{ size:A4; margin:0 }
+
+  html,body{ background:#8a9698 }
+
+  body{
+    font-family:var(--sans); color:var(--tx);
+    font-size:8.6pt; line-height:1.42;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+
+  .sheet{
+    width:210mm; height:297mm; background:var(--paper);
+    padding:11mm 12mm 9mm; margin:0 auto 8mm;
+    display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+  }
+  .sheet + .sheet{ page-break-before:always }
+
+  @media print{
+    html,body{ background:var(--paper) }
+    .sheet{ margin:0; box-shadow:none }
+    .noprint{ display:none !important }
+  }
+  @media screen{
+    .sheet{ box-shadow:0 4px 24px rgba(0,0,0,.28) }
+    body{ padding:8mm 0 }
+  }
+
+  /* ---------- primitives ---------- */
+  .eyebrow{
+    font-family:var(--mono); font-size:6pt; font-weight:500;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--tx3);
+  }
+  .rule{ display:flex; align-items:center; gap:7px; margin:0 0 5px }
+  .rule .eyebrow{ flex:none }
+  .rule:after{ content:""; height:1px; flex:1; background:var(--border) }
+
+  h2{ font-family:var(--serif); font-size:13pt; font-weight:600; letter-spacing:-.01em; line-height:1.18 }
+  h3{ font-family:var(--serif); font-size:10pt; font-weight:600; letter-spacing:-.005em }
+  .lede{ color:var(--tx2); font-size:8.2pt }
+  .tiny{ font-size:6.8pt; color:var(--tx3); line-height:1.4 }
+  em{ font-style:italic }
+  b,strong{ font-weight:600 }
+
+  .num{ font-family:var(--serif); font-weight:600; letter-spacing:-.02em; line-height:1 }
+
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:6px }
+
+  .dark{
+    background:linear-gradient(177deg,var(--teal-from) 0%,#10333b 60%,var(--teal-to) 100%);
+    color:#f3f8f6; border-radius:7px;
+  }
+  .dark .eyebrow{ color:rgba(159,224,214,.72) }
+  .dark .lede{ color:rgba(220,235,233,.72) }
+
+  /* ---------- page 1 ---------- */
+  .masthead{ padding:6mm 8mm; display:flex; align-items:center; gap:7.5mm }
+  .logocard{
+    flex:none; width:39mm; background:#fff; border-radius:5px; padding:2.6mm 3mm;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .logocard img{ width:100%; height:auto; display:block }
+  .masthead .tag{
+    font-family:var(--serif); font-size:15pt; font-weight:500; color:var(--mint);
+    letter-spacing:-.015em; line-height:1.22; margin:2.2mm 0 2mm;
+  }
+  .masthead .sub{ font-size:7.6pt; color:rgba(220,235,233,.7); line-height:1.45; max-width:88mm }
+
+  .pullquote{
+    font-family:var(--serif); font-size:15.5pt; font-weight:500;
+    line-height:1.26; letter-spacing:-.015em; margin:1mm 0 4mm;
+  }
+  .pullquote b{ font-weight:600; box-shadow:inset 0 -.32em 0 var(--amber-bg) }
+
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-top:1px solid var(--border); border-bottom:1px solid var(--border) }
+  .stat{ padding:3.6mm 4mm 3.4mm; border-left:1px solid var(--border) }
+  .stat:first-child{ border-left:0; padding-left:0 }
+  .stat .num{ font-size:20pt; color:var(--teal-from) }
+  .stat p{ font-size:7.2pt; color:var(--tx2); margin-top:1.4mm; line-height:1.34 }
+
+  .vs{ display:grid; grid-template-columns:26mm 1fr 1fr; gap:0; margin-top:1.5mm }
+  .vs > div{ padding:2.4mm 3.2mm; border-bottom:1px solid var(--border) }
+  .vs .hd{ font-family:var(--mono); font-size:6.2pt; letter-spacing:.11em; text-transform:uppercase; border-bottom:1px solid var(--tx); padding-bottom:1.6mm }
+  .vs .rowlabel{ font-weight:600; font-size:7.6pt; color:var(--tx) }
+  .vs .old{ background:var(--red-bg); color:#7d3a2b; font-size:7.6pt }
+  .vs .new{ background:var(--green-bg); color:#245b3c; font-size:7.6pt; font-weight:500 }
+  .vs .hd.old{ background:none; color:var(--red) }
+  .vs .hd.new{ background:none; color:var(--green) }
+
+  .shots{ display:grid; grid-template-columns:0.44fr 0.87fr 0.77fr; gap:4.5mm; margin-top:5mm }
+  .shot{ display:flex; flex-direction:column; gap:2.2mm }
+  .shotbox{
+    height:67mm; border:1px solid var(--border); border-radius:5px; background:#fff;
+    display:flex; align-items:center; justify-content:center; overflow:hidden; padding:2mm;
+  }
+  .shotbox img{ max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; display:block }
+  .shot p{ font-size:7pt }
+  .shot p{ font-size:7pt; color:var(--tx2); line-height:1.35 }
+  .shot p b{ color:var(--tx) }
+
+  /* ---------- page 2 ---------- */
+  .flow{ display:grid; grid-template-columns:repeat(4,1fr); gap:3mm }
+  .flow .st{ padding:2.8mm 3mm; background:#fff; border:1px solid var(--border); border-radius:5px; position:relative }
+  .flow .st:not(:last-child):after{
+    content:"→"; position:absolute; right:-2.7mm; top:50%; transform:translateY(-50%);
+    color:var(--tx3); font-size:8pt; z-index:2;
+  }
+  .flow h4{ font-family:var(--mono); font-size:5.8pt; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:1.6mm; font-weight:600 }
+  .flow p{ font-size:6.7pt; color:var(--tx2); line-height:1.5 }
+
+  table{ width:100%; border-collapse:collapse }
+  th{ font-family:var(--mono); font-size:5.9pt; letter-spacing:.1em; text-transform:uppercase; color:var(--tx3); text-align:left; padding:0 3mm 1.6mm 0; border-bottom:1px solid var(--tx) }
+  td{ padding:2.1mm 3mm 2.1mm 0; border-bottom:1px solid var(--border); font-size:7.3pt; vertical-align:top; line-height:1.38 }
+  td:last-child,th:last-child{ padding-right:0 }
+  .mname{ font-weight:600; font-size:7.6pt; white-space:nowrap }
+  .pill{ display:inline-block; padding:.7mm 1.8mm; border-radius:99px; font-family:var(--mono); font-size:5.6pt; letter-spacing:.05em; text-transform:uppercase; font-weight:600; white-space:nowrap }
+  .pill.ok{ background:var(--green-bg); color:#2f6f4c }
+  .pill.warn{ background:var(--amber-bg); color:#8a6216 }
+
+  .honesty{ background:var(--amber-bg); border:1px solid #e6cf95; border-left:3px solid var(--amber); border-radius:5px; padding:3.6mm 4.2mm }
+  .honesty h3{ color:#7a5610; margin-bottom:2mm }
+  .honesty .row{ display:flex; gap:2.4mm; margin-bottom:1.7mm; align-items:baseline }
+  .honesty .k{ font-family:var(--mono); font-size:5.8pt; letter-spacing:.08em; text-transform:uppercase; font-weight:600; flex:none; width:26mm; padding-top:.3mm }
+  .honesty .v{ font-size:7.2pt; color:#5c4415; line-height:1.42 }
+  .k.live{ color:#2f6f4c } .k.syn{ color:#8a6216 } .k.nv{ color:var(--red) }
+
+  .tiers{ display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:3mm }
+  .tier{ background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:6px; padding:3.2mm 3.4mm; position:relative }
+  .tier.hero{ background:rgba(212,154,46,.16); border-color:rgba(212,154,46,.5) }
+  .tier .badge{ position:absolute; top:-1.9mm; left:3.4mm; background:var(--amber); color:#2b1f08; font-family:var(--mono); font-size:5.2pt; font-weight:600; letter-spacing:.09em; text-transform:uppercase; padding:.7mm 1.8mm; border-radius:99px }
+  .tier h4{ font-family:var(--serif); font-size:9pt; font-weight:600; margin-bottom:.8mm }
+  .tier .price{ font-family:var(--serif); font-size:15pt; font-weight:600; color:var(--mint); letter-spacing:-.02em; line-height:1.05 }
+  .tier .pn{ font-size:6.4pt; color:rgba(220,235,233,.62); margin:.7mm 0 1.6mm; line-height:1.35 }
+  .tier .who{ font-size:6.7pt; color:rgba(230,242,240,.82); line-height:1.4 }
+
+  .flywheel{ display:flex; align-items:center; gap:2.2mm; flex-wrap:nowrap; margin:2.5mm 0 3.5mm }
+  .fw{ font-family:var(--mono); font-size:5.7pt; letter-spacing:.04em; text-transform:uppercase; color:rgba(230,242,240,.9); background:rgba(255,255,255,.08); border-radius:99px; padding:1.4mm 2.4mm; white-space:nowrap }
+  .fwar{ color:var(--mint); font-size:7pt; flex:none }
+
+  .mkt{ display:grid; grid-template-columns:repeat(4,1fr); gap:3mm; margin-top:3.5mm; padding-top:3mm; border-top:1px solid rgba(255,255,255,.14) }
+  .mkt .num{ font-size:11.5pt; color:var(--mint) }
+  .mkt p{ font-size:6.3pt; color:rgba(220,235,233,.62); margin-top:1mm; line-height:1.35 }
+
+  .impact{ display:grid; grid-template-columns:repeat(4,1fr); gap:0 }
+  .imp{ padding:0 4mm; border-left:1px solid var(--border) }
+  .imp:first-child{ border-left:0; padding-left:0 }
+  .imp .num{ font-size:17pt; color:var(--green) }
+  .imp p{ font-size:6.8pt; color:var(--tx2); margin-top:1.2mm; line-height:1.36 }
+
+  .sdg{ display:flex; gap:3.2mm; align-items:center; flex-wrap:wrap }
+  .sdgpair{ display:flex; gap:1.3mm; align-items:center }
+  .sdgpair span{ font-size:6.1pt; color:var(--tx2); line-height:1.1 }
+  .sdgb{ width:5.4mm; height:5.4mm; border-radius:2px; color:#fff; font-family:var(--mono); font-size:5.8pt; font-weight:600; display:flex; align-items:center; justify-content:center; flex:none }
+
+  footer{ margin-top:auto; padding-top:3mm; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-end; gap:6mm }
+  footer .tiny{ font-size:6.4pt }
+
+  .hint{ max-width:210mm; margin:0 auto 6mm; background:#16434c; color:#cfe9e4; border-radius:7px; padding:5mm 6mm; font-size:9.5pt; line-height:1.55 }
+  .hint b{ color:#9fe0d6 }
+  .hint code{ font-family:var(--mono); font-size:8.6pt; background:rgba(255,255,255,.1); padding:.5mm 1.4mm; border-radius:3px }
+</style>
+
+<div class="hint noprint">
+  <b>To print:</b> open in Chrome → <code>Ctrl+P</code> → Destination: your printer → Paper: <b>A4</b> →
+  Margins: <b>None</b> → <b>tick “Background graphics”</b> (essential — without it the teal blocks and
+  paper colour vanish) → Print on both sides, flip on <b>long edge</b>.
+  <br><br>
+  <b>Before printing —</b> save your three screenshots into <code>E:\OceanMind\</code> as
+  <code>ss1.png</code> (Fisher View), <code>ss2.png</code> (Fishing Zones + SHAP) and
+  <code>ss3.png</code> (catch certificate), then refresh this page. The logo and everything else
+  is already wired up. Add your contact email in the footer of page 2.
+</div>
+
+<!-- ══════════════════════════ PAGE 1 ══════════════════════════ -->
+<section class="sheet">
+
+  <div class="dark masthead">
+    <div class="logocard"><img src="OceanMindLogo.png" alt="OceanMind"></div>
+    <div>
+      <div class="eyebrow">Biothon 2026 · Environment &amp; Biodiversity · Marwadi University</div>
+      <div class="tag">AI-driven marine intelligence<br>for the Indian fisher.</div>
+      <p class="sub">Three siloed data pillars — oceanographic, fisheries and molecular biodiversity —
+        joined into one queryable layer, and delivered as a single word to the person who needs it at 4 a.m.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:5.5mm">
+    <div class="rule"><span class="eyebrow">The problem</span></div>
+    <p class="pullquote">A fisher’s decision to sail costs <b>₹3 lakh</b>. He makes it on a guess, at 4 a.m.</p>
+
+    <div class="stats">
+      <div class="stat"><div class="num">54%</div><p>of a mechanised trawler’s operating cost is fuel <em>(CMFRI)</em></p></div>
+      <div class="stat"><div class="num">14.5<span style="font-size:12pt"> M</span></div><p>Indians depend on marine fisheries for their living</p></div>
+      <div class="stat"><div class="num">35.5%</div><p>of world fish stocks overfished <em>(FAO 2025 — 2,570 stocks)</em></p></div>
+      <div class="stat"><div class="num">~7<span style="font-size:12pt"> M</span></div><p>small-scale fishers below the 15&nbsp;m AIS tracking threshold</p></div>
+    </div>
+
+    <p class="lede" style="margin-top:3.4mm">
+      The fisher loses money and the ocean loses fish — <b style="color:var(--tx)">from the same bad guess.</b>
+      Existing advisories tell him <em>where</em> fish might be. Nothing tells him <em>why</em>, in a language
+      he speaks, or proves what he actually caught once he lands it.
+    </p>
+  </div>
+
+  <div style="margin-top:5.5mm">
+    <div class="rule"><span class="eyebrow">What’s different</span></div>
+    <h2>Building on INCOIS — not replacing it.</h2>
+    <p class="lede" style="margin-top:1.4mm">
+      India’s INCOIS already publishes free Potential Fishing Zone advisories, and we’d consume them as a
+      source. Three structural limits remain, and they’re where OceanMind lives.
+    </p>
+
+    <div class="vs">
+      <div class="hd"></div>
+      <div class="hd old">Today’s satellite advisory</div>
+      <div class="hd new">OceanMind</div>
+
+      <div class="rowlabel">Validity</div>
+      <div class="old">24 hours, same-day satellite; cloud cover leaves gaps, no forecast</div>
+      <div class="new">Forecast-driven, re-classified weekly from live sea state</div>
+
+      <div class="rowlabel">Reasoning</div>
+      <div class="old">Tells you <em>where</em> — never <em>why</em>, never how much</div>
+      <div class="new">SHAP attribution on every zone — defensible in a policy hearing</div>
+
+      <div class="rowlabel">Reach</div>
+      <div class="old">Port name + lat/long, as text, in one language</div>
+      <div class="new">One word — GO / CAUTION / AVOID — by voice, in Hindi &amp; Tamil</div>
+
+      <div class="rowlabel">After the catch</div>
+      <div class="old" style="font-style:italic;opacity:.85">Nothing</div>
+      <div class="new">Hash-verified export certificate — and the revenue model</div>
+    </div>
+  </div>
+
+  <div style="margin-top:6mm">
+    <div class="rule"><span class="eyebrow">The product</span></div>
+    <div class="shots">
+      <div class="shot">
+        <div class="shotbox"><img src="ss1.png" alt="Fisher View"></div>
+        <p><b>One word, on his phone.</b> Live sea state, the active ban, and what the trip costs in fuel.</p>
+      </div>
+      <div class="shot">
+        <div class="shotbox"><img src="ss2.png" alt="Sustainable Fishing Zones with SHAP"></div>
+        <p><b>The model explains itself.</b> 182 zones classified weekly — SHAP ranks chlorophyll-a above
+          SST and fishing effort, with a bycatch risk score on every zone.</p>
+      </div>
+      <div class="shot">
+        <div class="shotbox"><img src="ss3.png" alt="EU catch certificate"></div>
+        <p><b>Boat to buyer.</b> EU IUU Reg. 1005/2008 chain of custody — every line carries a
+          verifiable SHA-256 proof.</p>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════════════════ PAGE 2 ══════════════════════════ -->
+<section class="sheet">
+
+  <div class="rule"><span class="eyebrow">How it’s built</span></div>
+  <div class="flow">
+    <div class="st"><h4>Open data</h4><p>ARGO · INCOIS · GFW<br>CMFRI · WoRMS · NCBI<br>FishBase · Open-Meteo</p></div>
+    <div class="st"><h4>Integration</h4><p>Schema matching across NetCDF / JSON / FASTA · PostGIS fusion · AIS quality QC · provenance tagging</p></div>
+    <div class="st"><h4>AI layer</h4><p>Isolation Forest · XGBoost + SHAP · YOLOv8 + ResNet50 · RAG on Llama 3.3 70B</p></div>
+    <div class="st"><h4>Delivery</h4><p>PWA · SMS alerts · voice (Hindi / Tamil) · 20 REST endpoints · hash ledger</p></div>
+  </div>
+
+  <p class="tiny" style="margin-top:2.6mm">
+    <b style="color:var(--tx)">Ours:</b> the integration layer, both models, the SHAP and provenance layers, the ledger and the whole
+    product surface. <b style="color:var(--tx)">Third-party:</b> Open-Meteo (weather), Groq (LLM inference), Roboflow (vision hosting),
+    Bhashini (voice). The novelty isn’t a new architecture — it’s that these three data pillars have never been joined in one queryable layer.
+  </p>
+
+  <table style="margin-top:4.5mm">
+    <tr><th style="width:31mm">Model</th><th style="width:34mm">Job</th><th>Why this model</th><th style="width:26mm">Status</th></tr>
+    <tr><td class="mname">Isolation Forest</td><td>Marine Health Index</td><td>Unsupervised — no ground truth exists for “ocean health”; detects deviation from regional climatology</td><td><span class="pill ok">Working</span></td></tr>
+    <tr><td class="mname">XGBoost + SHAP</td><td>Fishing zone class</td><td>Tabular, six features — boosting beats deep nets here, and tree SHAP gives exact attributions</td><td><span class="pill warn">Unvalidated vs CPUE</span></td></tr>
+    <tr><td class="mname">YOLOv8 + ResNet50</td><td>Species ID from photo</td><td>13 species = majority of Indian landings by volume; resolves to WoRMS AphiaID</td><td><span class="pill ok">Live inference</span></td></tr>
+    <tr><td class="mname">ConvLSTM</td><td>Migration forecast</td><td>Routes are CMFRI / IOTC tagging literature; +2 °C shift from published rates</td><td><span class="pill warn">Scaffolded</span></td></tr>
+  </table>
+
+  <div class="honesty" style="margin-top:4.5mm">
+    <h3>What’s live, and what isn’t</h3>
+    <div class="row"><div class="k live">Live now</div><div class="v">Open-Meteo marine weather &amp; tides · YOLOv8 + ResNet50 vision inference · Llama 3.3 70B RAG answers · WoRMS taxonomy · IUCN Red List status</div></div>
+    <div class="row"><div class="k syn">Synthetic today</div><div class="v">ARGO, Global Fishing Watch and INCOIS feeds — blocked on an API credential, not on engineering. Ingestion pipelines and schema are built and tested.</div></div>
+    <div class="row" style="margin-bottom:0"><div class="k nv">Not yet validated</div><div class="v">The zone classifier against real catch-per-unit-effort. That is precisely what the pilot is for — and why fishers use the platform free.</div></div>
+    <p class="tiny" style="margin-top:2.4mm;color:#8a6216"><em>The platform ships a <b>/trust</b> page stating all of this publicly, in product.</em></p>
+  </div>
+
+  <div class="dark" style="margin-top:5mm;padding:4.5mm 5mm">
+    <div class="eyebrow">Business model</div>
+    <h2 style="color:#f3f8f6;margin:1.6mm 0 0">The fisher never pays. <span style="color:var(--mint)">He’s the supply side.</span></h2>
+
+    <div class="flywheel">
+      <span class="fw">Fishers log catches</span><span class="fwar">→</span>
+      <span class="fw">Models learn ground truth</span><span class="fwar">→</span>
+      <span class="fw">Advisories sharpen</span><span class="fwar">→</span>
+      <span class="fw">More fishers join</span><span class="fwar">→</span>
+      <span class="fw">Traceability compounds</span>
+    </div>
+
+    <div class="tiers">
+      <div class="tier hero">
+        <span class="badge">Primary revenue</span>
+        <h4 style="margin-top:1.4mm">Exporter Traceability</h4>
+        <div class="price">₹100</div>
+        <div class="pn">per verified certificate · or ₹25k / month</div>
+        <div class="who">Seafood exporters &amp; processors. Not a new cost — EU IUU already forces them to file catch certificates via MPEDA.</div>
+      </div>
+      <div class="tier">
+        <h4>Institution Pro</h4>
+        <div class="price">₹2.5L</div>
+        <div class="pn">per year, per institution</div>
+        <div class="who">Universities, labs, consultancies. REST API, bulk export, unlimited scenario runs.</div>
+      </div>
+      <div class="tier">
+        <h4>Government</h4>
+        <div class="price">Custom</div>
+        <div class="pn">per-district partnership</div>
+        <div class="who">State fisheries departments. Advisory dissemination, SOS integration, compliance dashboards.</div>
+      </div>
+    </div>
+
+    <div class="mkt">
+      <div><div class="num">₹60,523 Cr</div><p>India’s seafood exports, FY 2023–24 — the addressable market</p></div>
+      <div><div class="num">EC 1005/2008</div><p>EU IUU Regulation — no certificate, no market access</p></div>
+      <div><div class="num">₹2,703 Cr</div><p>PMMSY fisheries allocation, Union Budget 2025–26</p></div>
+      <div><div class="num">26 lakh</div><p>fishers already on the National Fisheries Digital Platform</p></div>
+    </div>
+
+    <p class="lede" style="margin-top:3.2mm;font-size:7.4pt">
+      We don’t build distribution — we plug into it. Platform run cost at pilot scale is
+      <b style="color:var(--mint)">₹25,000 / month</b>, because every input is open data.
+      Break-even ≈ <b style="color:var(--mint)">250 certificates a month</b>.
+    </p>
+  </div>
+
+  <div style="margin-top:5mm">
+    <div class="rule"><span class="eyebrow">Measured impact — 500-fisher pilot</span></div>
+    <div class="impact">
+      <div class="imp"><div class="num">₹2.05 Cr</div><p>fuel saved per year across the pilot</p></div>
+      <div class="imp"><div class="num">₹41,000</div><p>back in each fisher’s pocket, annually</p></div>
+      <div class="imp"><div class="num">579 t</div><p>CO₂ avoided per year — ≈ 126 cars off the road</p></div>
+      <div class="imp"><div class="num">79%</div><p>of logged catch rated sustainable <em>(live figure)</em></p></div>
+    </div>
+    <p class="tiny" style="margin-top:2.6mm">
+      Derived from five stated assumptions — 500 fishers × 12 trips/month × 3 L saved/trip × ₹95/L — all printed
+      in-product on the <b>/impact</b> page. <b style="color:var(--tx)">Deliberately conservative:</b> INCOIS advisory studies report
+      15–25% fuel reduction; we modelled far below that because we have not measured it ourselves yet.
+    </p>
+  </div>
+
+  <footer>
+    <div>
+      <div class="eyebrow" style="margin-bottom:1.8mm">Aligned to UN Sustainable Development Goals</div>
+      <div class="sdg" style="margin-bottom:2.6mm">
+        <div class="sdgpair"><div class="sdgb" style="background:#4C9F38">3</div><span>Good Health</span></div>
+        <div class="sdgpair"><div class="sdgb" style="background:#A21942">8</div><span>Decent Work</span></div>
+        <div class="sdgpair"><div class="sdgb" style="background:#BF8B2E">12</div><span>Responsible Consumption</span></div>
+        <div class="sdgpair"><div class="sdgb" style="background:#3F7E44">13</div><span>Climate Action</span></div>
+        <div class="sdgpair"><div class="sdgb" style="background:#0A97D9">14</div><span>Life Below Water</span></div>
+      </div>
+      <p class="tiny"><b style="color:var(--tx)">OceanMind v1.0</b> · Adi (Crriminson) · Atharv (AtharvK-28) · Dept. of Bioinformatics, Marwadi University · <em>add contact email here</em></p>
+    </div>
+    <img src="OceanMindLogo.png" alt="" style="width:26mm;height:auto;opacity:.9;flex:none">
+  </footer>
+
+</section>

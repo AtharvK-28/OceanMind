@@ -17,6 +17,8 @@ import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import { SPECIES_OPTIONS, LANDING_SITES } from "@/lib/constants";
 import FishingCalendar from "@/components/ui/FishingCalendar";
+import CatchPhotoScan from "@/components/ui/CatchPhotoScan";
+import { refreshLedger } from "@/lib/ledger";
 import { computeZoneYield, estimateFuelCostInr, priceForSpecies } from "@/lib/economics";
 import type { SFZCurrentResponse, MHIStatusResponse, ChainSummaryResponse, CatchTraceResponse, CatchRecord } from "@/types/api";
 
@@ -379,6 +381,7 @@ export default function FisherView() {
         setCatchScore(score);
         scoreMsg = ` · ${t("fp.blueScoreShort")} ${score.score}`;
       } catch { /* scoring is a bonus — never block a log */ }
+      await refreshLedger(); // feed and chain summary update immediately
       toast(t("form.recorded", { n: res.block_number }) + scoreMsg, "success");
       setShowCatch(false);
     } finally { setLogging(false); }
@@ -702,6 +705,19 @@ export default function FisherView() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-text">{t("form.title", { port: displayCity })}</h3>
             <button onClick={() => setShowCatch(false)} className="text-text-faint hover:text-text-muted text-lg">&times;</button>
+          </div>
+          {/* Photo first — naming a species from a picture beats a dropdown at sea */}
+          <div className="pb-4 mb-4 border-b border-[#f0ebdf]">
+            <CatchPhotoScan
+              lat={loc.lat}
+              lon={loc.lon}
+              onDetect={(d) => {
+                const match = Object.keys(SPECIES_OPTIONS).find((s) =>
+                  s.toLowerCase().startsWith(d.common.toLowerCase().slice(0, 6))
+                );
+                if (match) setCatchForm((f) => ({ ...f, species: match }));
+              }}
+            />
           </div>
           <form onSubmit={logCatch} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
             <label className="block">

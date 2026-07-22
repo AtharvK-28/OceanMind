@@ -8,6 +8,7 @@ import TabGroup from "@/components/ui/TabGroup";
 import DataTable from "@/components/ui/DataTable";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import type { VoiceQueryResponse, VoiceLanguage } from "@/types/api";
+import { useToast } from "@/components/ui/Toast";
 
 const SAMPLES: Record<string, string> = {
   hi: "गुजरात के पास समुद्री स्वास्थ्य कैसा है?",
@@ -23,6 +24,7 @@ const SUGGESTED = [
 ];
 
 export default function VoicePage() {
+  const { toast } = useToast();
   const [tab, setTab] = useState("text");
   const [lang, setLang] = useState("hi");
   const { data: langData } = useSWR<{ languages: VoiceLanguage[] }>("/api/v1/voice/languages", fetcher);

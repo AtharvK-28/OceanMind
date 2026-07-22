@@ -9,6 +9,7 @@ import MetricCard from "@/components/ui/MetricCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import ErrorState from "@/components/ui/ErrorState";
 import ResultBadge from "@/components/ui/ResultBadge";
+import ScoreGuide from "@/components/ui/ScoreGuide";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import type { MHIStatusResponse, MHIScoreResponse } from "@/types/api";
@@ -190,6 +191,26 @@ export default function MHIPage() {
           </div>
         )}
       </div>
+
+      <ScoreGuide
+        title="What does the Marine Health Index mean?"
+        intro="MHI is a 0–100 measure of how normal the water column looks at a grid cell. An Isolation Forest is trained on healthy ocean conditions, then scores each new observation by how far it deviates from that baseline — so a low score means 'this water is behaving unusually', not simply 'this water is warm'."
+        bands={[
+          { range: "65–100", label: "Normal", color: "#3a8c5f", meaning: "Conditions sit inside the healthy envelope for this region and season.", action: "Fish normally. Nothing here needs attention." },
+          { range: "50–64", label: "Watch", color: "#8bbf5f", meaning: "Mild deviation — often the leading edge of a seasonal shift or a developing anomaly.", action: "Note it. Re-check next week before changing plans." },
+          { range: "25–49", label: "Warning", color: "#d49a2e", meaning: "Clear multi-parameter stress. This is where an alert is raised.", action: "Expect species to move. Cross-check the fishing zones map before heading out." },
+          { range: "0–24", label: "Critical", color: "#c25a44", meaning: "Severe anomaly — the combination of heat, oxygen and pH is well outside normal.", action: "Treat as a possible heatwave or hypoxic event. Escalate to managers." },
+        ]}
+        factors={[
+          { name: "SST anomaly", detail: "Deviation from the rolling temperature mean — not absolute temperature, so 29 °C is normal in May and alarming in January." },
+          { name: "Chlorophyll deviation", detail: "Departure from the productivity baseline. Collapse here precedes a drop in forage fish." },
+          { name: "Dissolved oxygen", detail: "µmol/kg. Low DO drives fish out of a cell faster than warmth alone." },
+          { name: "pH", detail: "Acidification stress, particularly on shell-forming species and larvae." },
+          { name: "Salinity", detail: "PSU. Freshwater intrusion and evaporation both shift the habitat envelope." },
+          { name: "DO × pH compound", detail: "An interaction term — low oxygen and low pH together are far worse than either alone." },
+        ]}
+        method="Model: Isolation Forest (unsupervised anomaly detection, 8% contamination). Because it is unsupervised, it flags unusual conditions rather than predicting a named event — a critical score is a prompt to investigate, not a diagnosis. Inputs are ARGO float profiles with INCOIS SST where available."
+      />
     </div>
   );
 }

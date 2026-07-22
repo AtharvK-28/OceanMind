@@ -45,6 +45,19 @@ def cached(ttl_seconds: int):
         return wrapper
     return decorator
 
+
+def invalidate_cache(*func_names: str) -> None:
+    """
+    Drop cached responses for the given endpoint functions.
+
+    Write endpoints must call this for every read endpoint they affect —
+    otherwise a client that correctly re-fetches after a write still gets the
+    pre-write response until the TTL lapses, which looks like a laggy UI.
+    """
+    names = set(func_names)
+    for key in [k for k in _cache if k.split(":", 1)[0] in names]:
+        _cache.pop(key, None)
+
 import glob as globmod
 from backend.db.connection import check_db_connection, get_db, engine
 
@@ -518,8 +531,18 @@ async def lifespan(app: FastAPI):
             logger.info("Training SFZ model from synthetic data...")
             sfz_model.train(_synthetic_sfz_data(n=3000))
 
-    # Initialise RAG (lazy — first query triggers embedding build)
-    logger.info("RAG pipeline will initialise on first query.")
+    # Warm the RAG pipeline in the background. Building the FAISS index takes
+    # ~14s; doing it lazily meant whoever asked the first question waited it
+    # out. Run it in a thread so startup and request serving aren't blocked.
+    async def _warm_rag():
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, rag_pipeline.initialise)
+            logger.success(f"RAG warmed — LLM: {getattr(rag_pipeline, '_llm_name', 'fallback')}")
+        except Exception as e:
+            logger.warning(f"RAG warm-up failed, will retry on first query: {e}")
+
+    rag_warm_task = asyncio.create_task(_warm_rag())
 
     _seed_demo_catches()
 
@@ -527,6 +550,7 @@ async def lifespan(app: FastAPI):
 
     logger.success("OceanMind backend ready.")
     yield
+    rag_warm_task.cancel()
     incois_refresh_task.cancel()
     logger.info("OceanMind backend shutting down.")
 
@@ -538,6 +562,24 @@ _ALLOWED_ORIGINS = [
 _frontend_url = os.getenv("FRONTEND_URL", "")
 if _frontend_url:
     _ALLOWED_ORIGINS.append(_frontend_url)
+
+# Outside production the frontend is reached on whatever host the demo machine
+# happens to have — a LAN IP from a phone, or a Capacitor shell. api.ts derives
+# the backend as <same-host>:8000, so pinning CORS to localhost alone blocks
+# every non-desktop client. Allow private-range and Capacitor origins here;
+# production stays restricted to _ALLOWED_ORIGINS.
+_ALLOWED_ORIGIN_REGEX = None if _IS_PRODUCTION else (
+    r"^(https?://(localhost|127\.0\.0\.1|"
+    r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+    r"192\.168\.\d{1,3}\.\d{1,3}|"
+    r"172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?"
+    # Demo tunnels. Showing the PWA on a phone needs HTTPS, which means the
+    # frontend is served from a quick-tunnel host — without these the browser
+    # blocks every API call and the app hangs on "connecting".
+    r"|https://[a-z0-9-]+\.trycloudflare\.com"
+    r"|https://[a-z0-9-]+\.ngrok(-free)?\.(io|app|dev)"
+    r"|capacitor://localhost|ionic://localhost)$"
+)
 
 app = FastAPI(
     title="OceanMind API",
@@ -554,10 +596,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-    allow_credentials=False,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_origin_regex=_ALLOWED_ORIGIN_REGEX,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    allow_credentials=True,
 )
 
 # =============================================================================
@@ -631,6 +674,10 @@ async def health():
         "mhi_model": "loaded" if mhi_model._trained else "not ready",
         "sfz_model": "loaded" if sfz_model._trained else "not ready",
         "rag": "ready" if rag_pipeline._ready else "not initialised",
+        # The actual LLM behind RAG answers ("fallback" when no key is set), so
+        # the Data Trust page reports what is really running rather than a
+        # hardcoded claim that can drift out of date.
+        "llm": getattr(rag_pipeline, "_llm_name", "fallback"),
         "blockchain": f"{ledger.get_chain_summary()['total_blocks']} blocks",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -1059,6 +1106,9 @@ async def trace_catch(req: CatchTraceRequest):
         landing_site_id=req.landing_site_id,
         fisher_token=req.fisher_token,
     )
+    # The chain just changed — drop every cached view of it so the next read
+    # reflects the new block immediately.
+    invalidate_cache("trace_history", "trace_chain_summary", "footprint_summary")
     return result
 
 
@@ -1072,14 +1122,14 @@ async def trace_verify(transaction_id: str):
 
 
 @app.get("/api/v1/trace/chain-summary", tags=["Blockchain Traceability"])
-@cached(ttl_seconds=300)
+@cached(ttl_seconds=5)
 async def trace_chain_summary():
     """Mock ledger chain statistics."""
     return ledger.get_chain_summary()
 
 
 @app.get("/api/v1/trace/history", tags=["Blockchain Traceability"])
-@cached(ttl_seconds=60)
+@cached(ttl_seconds=5)
 async def trace_history(landing_site: Optional[str] = Query(None)):
     """Catch history, optionally filtered by landing site."""
     return {"records": ledger.get_catch_history(landing_site), "total": len(ledger._chain)}

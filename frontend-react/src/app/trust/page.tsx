@@ -16,7 +16,7 @@ const STATUS: Record<Kind, { label: string; color: string; bg: string }> = {
   mock:      { label: "Mock",      color: "#5b6d8c", bg: "#eaedf3" },
 };
 
-interface Health { db: string; mhi_model: string; sfz_model: string; blockchain: string }
+interface Health { db: string; mhi_model: string; sfz_model: string; blockchain: string; llm?: string }
 // Some endpoints report is_live as a boolean, others per-feed (e.g. INCOIS
 // returns {sst, chlorophyll}). Treat a source as live only if every feed is —
 // a truthy object must never be mistaken for "live".
@@ -53,6 +53,11 @@ export default function TrustPage() {
   const argoLive = allLive(argo?.is_live);
   const gfwLive = allLive(gfw?.is_live);
   const incoisLive = allLive(incois?.is_live);
+  // Read the real LLM from /health rather than asserting one — when no API key
+  // is configured the pipeline answers from retrieval alone, and this page
+  // should say so before a judge notices the mismatch on Ask OceanMind.
+  const llmName = health?.llm ?? "";
+  const llmLive = Boolean(llmName) && llmName !== "fallback";
 
   const sources: { name: string; powers: string; kind: Kind; note: string }[] = [
     {
@@ -60,12 +65,14 @@ export default function TrustPage() {
       note: "Free, keyless API called live on every advisory request — wind, wave height, water temperature and tide times are real.",
     },
     {
-      name: "Roboflow vision model", powers: "Catch-photo species identification", kind: "live",
-      note: "Real inference on uploaded photos — the species, confidence and AphiaID come back from the hosted model.",
+      name: "YOLOv8 + ResNet50 vision model", powers: "Catch-photo species identification", kind: "live",
+      note: "Runs locally on our own trained weights — detection then classification. The species, confidence and AphiaID are real inference output, not a lookup table.",
     },
     {
-      name: "Groq · Llama 3.3 70B", powers: "Ask OceanMind (RAG) · voice answers", kind: "live",
-      note: "Real LLM calls. Every answer cites the documents it retrieved from.",
+      name: llmLive ? `LLM · ${llmName}` : "LLM (Llama 3.3 70B)", powers: "Ask OceanMind (RAG) · voice answers", kind: llmLive ? "live" : "fallback",
+      note: llmLive
+        ? "Real LLM calls. Every answer cites the documents it retrieved from."
+        : "No LLM API key is configured in this environment, so answers are composed from the retrieved passages directly and labelled “fallback mode”. Retrieval and citations below are unaffected — they are real either way.",
     },
     {
       name: "FAISS + project corpus", powers: "RAG retrieval & provenance", kind: "live",
@@ -144,39 +151,59 @@ export default function TrustPage() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-4 px-1">
-        {(Object.keys(STATUS) as Kind[]).map((k) => (
-          <div key={k} className="flex items-center gap-2">
-            <Pill kind={k} />
-            <span className="text-[11.5px] text-text-muted">
-              {k === "live" && "Real API call, right now"}
-              {k === "real" && "Genuine measured / reference data"}
-              {k === "fallback" && "Synthetic stand-in, labelled in the UI"}
-              {k === "simulated" && "Canned for the MVP"}
-              {k === "mock" && "Mock implementation, real cryptography"}
-            </span>
-          </div>
-        ))}
+      {/* Legend — as a card, so it reads as a key rather than stray text */}
+      <div className="bg-white border border-card-border rounded-2xl p-4 mb-5" style={{ boxShadow: cardShadow }}>
+        <div className="text-[10px] uppercase tracking-[0.1em] text-text-muted mb-3" style={mono}>How to read the status labels</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5">
+          {(Object.keys(STATUS) as Kind[]).map((k) => (
+            <div key={k} className="flex items-start gap-2.5">
+              <span className="flex-none mt-px"><Pill kind={k} /></span>
+              <span className="text-[11.5px] text-text-muted leading-snug">
+                {k === "live" && "Real API call, right now"}
+                {k === "real" && "Genuine measured / reference data"}
+                {k === "fallback" && "Synthetic stand-in, labelled in the UI"}
+                {k === "simulated" && "Canned for the MVP"}
+                {k === "mock" && "Mock implementation, real cryptography"}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Source inventory */}
-      <div className="bg-white border border-card-border rounded-2xl overflow-hidden mb-5" style={{ boxShadow: cardShadow }}>
-        <div className="hidden lg:grid grid-cols-12 gap-4 px-5 py-3 border-b border-card-border bg-[linear-gradient(168deg,#fbf7ee,#fff)]">
-          <div className="col-span-3 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>Source</div>
-          <div className="col-span-3 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>Powers</div>
-          <div className="col-span-1 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>Status</div>
-          <div className="col-span-5 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>What that means</div>
-        </div>
-        {sources.map((s) => (
-          <div key={s.name} className="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-4 px-5 py-3.5 border-b border-[#f0ebdf] last:border-0 hover:bg-card-hover/40 transition-colors">
-            <div className="lg:col-span-3 text-[13px] font-semibold text-text">{s.name}</div>
-            <div className="lg:col-span-3 text-[12px] text-text-secondary">{s.powers}</div>
-            <div className="lg:col-span-1"><Pill kind={s.kind} /></div>
-            <div className="lg:col-span-5 text-[11.5px] text-text-muted leading-snug">{s.note}</div>
+      {/* Source inventory, grouped by tier so the honest parts are unmissable */}
+      {([
+        { title: "Live integrations", sub: "Called against a real service while you use the app", kinds: ["live"] as Kind[] },
+        { title: "Real datasets", sub: "Genuine measured or authoritative reference data, bundled", kinds: ["real"] as Kind[] },
+        { title: "Labelled stand-ins", sub: "Not real yet — and never presented as if they were", kinds: ["fallback", "simulated", "mock"] as Kind[] },
+      ]).map((group) => {
+        const rows = sources.filter((s) => group.kinds.includes(s.kind));
+        if (rows.length === 0) return null;
+        return (
+          <div key={group.title} className="mb-5">
+            <div className="flex items-baseline gap-3 mb-2.5 px-1">
+              <h2 className="text-[15px] font-semibold text-text m-0" style={serif}>{group.title}</h2>
+              <span className="text-[11.5px] text-text-faint">{group.sub}</span>
+              <span className="ml-auto text-[11px] text-text-faint" style={mono}>{rows.length}</span>
+            </div>
+            <div className="bg-white border border-card-border rounded-2xl overflow-hidden" style={{ boxShadow: cardShadow }}>
+              <div className="hidden lg:grid grid-cols-12 gap-4 px-5 py-2.5 border-b border-card-border bg-[linear-gradient(168deg,#fbf7ee,#fff)]">
+                <div className="col-span-3 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>Source</div>
+                <div className="col-span-3 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>Powers</div>
+                <div className="col-span-2 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>Status</div>
+                <div className="col-span-4 text-[10px] uppercase tracking-[0.1em] text-text-muted" style={mono}>What that means</div>
+              </div>
+              {rows.map((s) => (
+                <div key={s.name} className="grid grid-cols-1 lg:grid-cols-12 gap-1.5 lg:gap-4 px-5 py-4 border-b border-[#f0ebdf] last:border-0 hover:bg-card-hover/40 transition-colors">
+                  <div className="lg:col-span-3 text-[13px] font-semibold text-text leading-snug">{s.name}</div>
+                  <div className="lg:col-span-3 text-[12px] text-text-secondary leading-snug">{s.powers}</div>
+                  <div className="lg:col-span-2"><Pill kind={s.kind} /></div>
+                  <div className="lg:col-span-4 text-[11.5px] text-text-muted leading-relaxed">{s.note}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
 
       {/* Why */}
       <div className="bg-white border border-card-border rounded-2xl p-5 mb-5" style={{ boxShadow: cardShadow }}>

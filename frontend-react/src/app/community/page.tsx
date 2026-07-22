@@ -9,7 +9,12 @@ import MetricCard from "@/components/ui/MetricCard";
 import MapContainer, { type MarkerPoint } from "@/components/maps/MapContainer";
 import MapLegend from "@/components/maps/MapLegend";
 import ErrorState from "@/components/ui/ErrorState";
-import type { CatchRecord } from "@/types/api";
+import CatchPhotoScan from "@/components/ui/CatchPhotoScan";
+import { refreshLedger } from "@/lib/ledger";
+import { useToast } from "@/components/ui/Toast";
+import { apiPost } from "@/lib/api";
+import { SPECIES_OPTIONS, LANDING_SITES } from "@/lib/constants";
+import type { CatchRecord, CatchTraceResponse } from "@/types/api";
 
 // Port coordinates used as the "near you" reference point (matches Fisher View).
 const PORT_COORDS: Record<string, { lat: number; lon: number }> = {
@@ -101,6 +106,38 @@ export default function CommunityPage() {
   const totalKg = filtered.reduce((s, r) => s + r.quantity_kg, 0);
   const reporters = new Set(records.map((r) => r.fisher_token || r.transaction_id)).size;
 
+  // ── Report a catch ───────────────────────────────────────────────────────
+  // The community map is only as good as what fishers put into it, so the
+  // report action lives here rather than only on Fisher View — you contribute
+  // from the same screen that shows you what everyone else landed.
+  const { toast } = useToast();
+  const [showReport, setShowReport] = useState(false);
+  const [form, setForm] = useState({ species: Object.keys(SPECIES_OPTIONS)[0], quantity_kg: 40 });
+  const [logging, setLogging] = useState(false);
+
+  async function submitReport(e: React.FormEvent) {
+    e.preventDefault();
+    setLogging(true);
+    try {
+      const speciesName = form.species.split(" (")[0];
+      const res = await apiPost<CatchTraceResponse>("/api/v1/trace/catch", {
+        species_aphia_id: SPECIES_OPTIONS[form.species],
+        species_name: speciesName,
+        quantity_kg: form.quantity_kg,
+        latitude: ref.lat,
+        longitude: ref.lon,
+        landing_site_id: Object.values(LANDING_SITES)[0],
+      });
+      toast(t("form.recorded", { n: res.block_number }), "success");
+      setShowReport(false);
+      await refreshLedger(); // new catch appears on the map and feed immediately
+    } catch {
+      toast("Couldn't record the catch — try again.", "error");
+    } finally {
+      setLogging(false);
+    }
+  }
+
   return (
     <div className="animate-page-enter">
       <div className="flex justify-end mb-2">
@@ -126,6 +163,69 @@ export default function CommunityPage() {
         <MetricCard label={t("comm.landed")} value={`${Math.round(totalKg)} kg`} icon="ph ph-scales" />
         <MetricCard label={t("comm.species")} value={speciesList.length} icon="ph ph-dna" />
         <MetricCard label={t("comm.reporters")} value={reporters} icon="ph ph-users-three" />
+      </div>
+
+      {/* Report your catch — the contribution side of a community feed */}
+      <div className="mb-5">
+        {!showReport ? (
+          <button onClick={() => setShowReport(true)}
+            className="w-full flex items-center gap-3 bg-white border border-dashed border-accent/40 hover:border-accent
+                       hover:bg-[#eaf3ef] rounded-2xl px-5 py-4 text-left transition-colors group">
+            <span className="w-11 h-11 flex-none rounded-xl bg-[#eaf3ef] text-accent flex items-center justify-center group-hover:bg-white transition-colors">
+              <i className="ph ph-camera text-[20px]" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[14px] font-semibold text-text">Report your catch</span>
+              <span className="block text-[12px] text-text-muted mt-0.5">
+                Photograph it — the vision model names the species, and it goes on the ledger and this map for everyone.
+              </span>
+            </span>
+            <i className="ph ph-plus text-[18px] text-accent flex-none" />
+          </button>
+        ) : (
+          <div className="animate-data-enter bg-white border border-card-border rounded-2xl p-5"
+            style={{ boxShadow: "0 1px 2px rgba(23,48,57,0.04), 0 10px 26px rgba(23,48,57,0.035)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-text" style={{ fontFamily: "'Newsreader', serif" }}>Report your catch</h3>
+              <button onClick={() => setShowReport(false)} aria-label="Close" className="text-text-faint hover:text-text-muted text-lg leading-none">&times;</button>
+            </div>
+
+            <div className="pb-4 mb-4 border-b border-[#f0ebdf]">
+              <CatchPhotoScan lat={ref.lat} lon={ref.lon}
+                onDetect={(d) => {
+                  const match = Object.keys(SPECIES_OPTIONS).find((s) =>
+                    s.toLowerCase().startsWith(d.common.toLowerCase().slice(0, 6))
+                  );
+                  if (match) setForm((f) => ({ ...f, species: match }));
+                }} />
+            </div>
+
+            <form onSubmit={submitReport} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <label className="block">
+                <span className="text-xs text-text-muted">{t("form.species")}</span>
+                <select value={form.species} onChange={(e) => setForm({ ...form, species: e.target.value })}
+                  className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2.5 text-sm text-text">
+                  {Object.keys(SPECIES_OPTIONS).map((s) => <option key={s} value={s}>{s.split(" (")[0]}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs text-text-muted">{t("form.quantity")}</span>
+                <input type="number" min={1} value={form.quantity_kg}
+                  onChange={(e) => setForm({ ...form, quantity_kg: +e.target.value })}
+                  className="w-full mt-1 bg-card-hover border border-card-border rounded-lg px-3 py-2.5 text-sm text-text" />
+              </label>
+              <button type="submit" disabled={logging}
+                className="bg-accent hover:bg-accent-dark text-white rounded-lg py-2.5 text-sm font-semibold transition-colors disabled:opacity-50">
+                {logging ? t("form.logging") : t("form.record")}
+              </button>
+            </form>
+
+            <p className="text-[11px] text-text-faint mt-3 leading-snug">
+              Logged at {geo ? "your GPS position" : "your saved port"} ({ref.lat.toFixed(2)}, {ref.lon.toFixed(2)}) and
+              hashed into the catch ledger — it appears on the map above as soon as it&apos;s written.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Species filter */}

@@ -6,6 +6,7 @@ Every answer carries provenance: source record IDs + quality flags.
 import os
 import json
 import uuid
+import threading
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -130,6 +131,28 @@ OCEAN_KNOWLEDGE = [
         ),
     },
     {
+        "id": "MHW_002",
+        "source": "OCEANMIND_SYSTEM",
+        "quality_flag": "GOOD",
+        "text": (
+            "How OceanMind detects a marine heatwave: a marine heatwave is a prolonged period of "
+            "anomalously warm sea surface temperature relative to the local seasonal baseline, not "
+            "simply water that is warm in absolute terms. OceanMind detects them in three stages. "
+            "First, the Marine Health Index scores each grid cell with an Isolation Forest trained on "
+            "healthy ocean conditions; its leading input is SST anomaly, the deviation from the rolling "
+            "temperature mean, alongside chlorophyll deviation, dissolved oxygen, pH, salinity and a "
+            "compound dissolved-oxygen-by-pH interaction term. Cells scoring below 50 raise an alert and "
+            "cells below 25 are classed CRITICAL, the signature of a heatwave or hypoxic event. "
+            "Second, live sea surface temperature from the Open-Meteo Marine API is compared against its "
+            "own 7-day mean to give a current SST trend, so a warming run is visible as it develops. "
+            "Third, the digital twin projects a chosen temperature anomaly forward week by week to show "
+            "where the Marine Health Index degrades, which cells turn critical, and how far species "
+            "habitat shifts poleward. Because the Isolation Forest is unsupervised it flags anomalous "
+            "conditions rather than declaring a named event, so a critical score is a prompt to "
+            "investigate rather than a certified heatwave declaration."
+        ),
+    },
+    {
         "id": "GUJARAT_001",
         "source": "INCOIS_REGIONAL",
         "quality_flag": "GOOD",
@@ -156,6 +179,9 @@ class OceanMindRAG:
         self.llm: Optional[ChatOpenAI] = None
         self._ready = False
         self._docs: list[Document] = []
+        # Startup warm-up and a first query can race; serialise them so the
+        # index is only ever built once.
+        self._init_lock = threading.Lock()
 
     def _load_project_docs(self) -> list[Document]:
         """
@@ -207,10 +233,21 @@ class OceanMindRAG:
         return docs
 
     def initialise(self):
-        """Build FAISS index + initialise LLM (OpenRouter)."""
+        """Build the FAISS index and connect the LLM. Safe to call repeatedly."""
+        with self._init_lock:
+            if self._ready:
+                return
+            self._initialise_locked()
+
+    def _initialise_locked(self):
+        """Actual initialisation. Callers must hold _init_lock."""
+        # Three providers are supported. Groq is preferred when
+        # its key is present; OpenRouter is the fallback, followed by Gemini.
+        groq_key = os.getenv("GROQ_API_KEY", "")
         openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
-        if not openrouter_key:
-            logger.warning("No OPENROUTER_API_KEY set — RAG will use fallback mode.")
+        gemini_key = os.getenv("GEMINI_API_KEY", "")
+        if not groq_key and not openrouter_key and not gemini_key:
+            logger.warning("No LLM API keys set — RAG will use fallback mode.")
 
         logger.info("Initialising RAG pipeline (sentence-transformers CPU mode)...")
 
@@ -252,9 +289,30 @@ class OceanMindRAG:
             os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
             self.vectorstore.save_local(FAISS_INDEX_PATH)
 
-        # LLM: Google Gemini
-        gemini_key = os.getenv("GEMINI_API_KEY", "")
-        if gemini_key and ChatGoogleGenerativeAI:
+        # LLM setup
+        if groq_key and ChatOpenAI:
+            model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+            self.llm = ChatOpenAI(
+                model=model,
+                api_key=groq_key,
+                base_url="https://api.groq.com/openai/v1",
+                temperature=0.1,
+                max_tokens=512,
+            )
+            self._llm_name = f"{model} (Groq)"
+            logger.info(f"LLM: Groq connected — model: {model}")
+        elif openrouter_key and ChatOpenAI:
+            model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
+            self.llm = ChatOpenAI(
+                model=model,
+                api_key=openrouter_key,
+                base_url="https://openrouter.ai/api/v1",
+                temperature=0.1,
+                max_tokens=512,
+            )
+            self._llm_name = f"{model} (OpenRouter)"
+            logger.info(f"LLM: OpenRouter connected — model: {model}")
+        elif gemini_key and ChatGoogleGenerativeAI:
             model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
             self.llm = ChatGoogleGenerativeAI(
                 model=model,
